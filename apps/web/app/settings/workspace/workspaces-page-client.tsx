@@ -104,6 +104,9 @@ export function WorkspacesPageClient() {
     if (!newWorkspaceName.trim()) return;
     try {
       const created = await createRequest.run({ name: newWorkspaceName.trim() });
+      // Existing items pass through untouched — remapping them into fresh
+      // literals used to drop fields the literal didn't list (e.g.
+      // office_workflow_id), flipping office workspaces to kanban in the UI.
       setWorkspaces([
         {
           id: created.id,
@@ -113,20 +116,12 @@ export function WorkspacesPageClient() {
           default_executor_id: created.default_executor_id ?? null,
           default_environment_id: created.default_environment_id ?? null,
           default_agent_profile_id: created.default_agent_profile_id ?? null,
+          default_config_agent_profile_id: created.default_config_agent_profile_id ?? null,
+          office_workflow_id: created.office_workflow_id ?? null,
           created_at: created.created_at,
           updated_at: created.updated_at,
         },
-        ...items.map((workspace: Workspace) => ({
-          id: workspace.id,
-          name: workspace.name,
-          description: workspace.description ?? null,
-          owner_id: workspace.owner_id,
-          default_executor_id: workspace.default_executor_id ?? null,
-          default_environment_id: workspace.default_environment_id ?? null,
-          default_agent_profile_id: workspace.default_agent_profile_id ?? null,
-          created_at: workspace.created_at,
-          updated_at: workspace.updated_at,
-        })),
+        ...items,
       ]);
       setNewWorkspaceName("");
       setIsAdding(false);

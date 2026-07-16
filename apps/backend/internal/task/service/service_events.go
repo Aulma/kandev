@@ -280,8 +280,12 @@ func (s *Service) publishWorkspaceEvent(ctx context.Context, eventType string, w
 		"default_environment_id":          workspace.DefaultEnvironmentID,
 		"default_agent_profile_id":        workspace.DefaultAgentProfileID,
 		"default_config_agent_profile_id": workspace.DefaultConfigAgentProfileID,
-		"created_at":                      workspace.CreatedAt.Format(time.RFC3339),
-		"updated_at":                      workspace.UpdatedAt.Format(time.RFC3339),
+		// The frontend derives the workspace's Office/Kanban identity from
+		// office_workflow_id; omitting it here made WS-inserted workspaces
+		// render as kanban until the next full hydration.
+		"office_workflow_id": workspace.OfficeWorkflowID,
+		"created_at":         workspace.CreatedAt.Format(time.RFC3339),
+		"updated_at":         workspace.UpdatedAt.Format(time.RFC3339),
 	}
 
 	s.publishEventToBus(ctx, eventType, "workspace", workspace.ID, data)

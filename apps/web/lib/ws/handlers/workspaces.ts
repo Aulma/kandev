@@ -18,6 +18,9 @@ export function registerWorkspacesHandlers(store: StoreApi<AppState>): WsHandler
           default_environment_id: payload.default_environment_id ?? null,
           default_agent_profile_id: payload.default_agent_profile_id ?? null,
           default_config_agent_profile_id: payload.default_config_agent_profile_id ?? null,
+          // Office/Kanban identity — without it a WS-inserted office
+          // workspace renders with the Kanban badge and mis-routes.
+          office_workflow_id: payload.office_workflow_id ?? null,
           created_at: payload.created_at ?? new Date().toISOString(),
           updated_at: payload.updated_at ?? new Date().toISOString(),
         };
@@ -55,6 +58,10 @@ export function registerWorkspacesHandlers(store: StoreApi<AppState>): WsHandler
                     "default_config_agent_profile_id" in message.payload
                       ? (message.payload.default_config_agent_profile_id ?? null)
                       : (item.default_config_agent_profile_id ?? null),
+                  office_workflow_id:
+                    "office_workflow_id" in message.payload
+                      ? (message.payload.office_workflow_id ?? null)
+                      : (item.office_workflow_id ?? null),
                   updated_at: message.payload.updated_at ?? item.updated_at,
                 }
               : item,
