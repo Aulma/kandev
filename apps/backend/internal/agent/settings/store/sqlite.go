@@ -831,9 +831,17 @@ func (r *sqliteRepository) GetAgentProfileIncludingDeleted(ctx context.Context, 
 	return r.applyLegacyBackfill(ctx, profile), nil
 }
 
+// ListAgentProfiles returns the agent's global CLI profiles. Office agent
+// instances share this table (ADR 0005 Wave G) scoped by workspace_id, and
+// every caller of this method is a kanban-side surface (settings CRUD,
+// discovery sync, boot reconciler, orphan cleanup, workflow import) — none
+// may see or mutate office rows. The workspace_id filter is what keeps the
+// boot-time profile sync/heal passes from renaming office agents to the
+// CLI's current model label on every restart.
 func (r *sqliteRepository) ListAgentProfiles(ctx context.Context, agentID string) ([]*models.AgentProfile, error) {
 	rows, err := r.ro.QueryContext(ctx,
-		r.ro.Rebind(agentProfileSelectColumns+` WHERE agent_id = ? AND deleted_at IS NULL ORDER BY created_at DESC`),
+		r.ro.Rebind(agentProfileSelectColumns+
+			` WHERE agent_id = ? AND deleted_at IS NULL AND COALESCE(workspace_id, '') = '' ORDER BY created_at DESC`),
 		agentID)
 	if err != nil {
 		return nil, err
@@ -857,10 +865,13 @@ func (r *sqliteRepository) ListAgentProfiles(ctx context.Context, agentID string
 // profile rows (deleted_at IS NOT NULL). It is the "has been provisioned
 // before" signal the boot-time seeders consult before recreating a default
 // profile, so a profile the user deleted is not silently resurrected.
+// Scoped to global CLI profiles: a deleted office agent instance must not
+// suppress seeding of the kanban default profile.
 func (r *sqliteRepository) HasDeletedAgentProfiles(ctx context.Context, agentID string) (bool, error) {
 	var exists int
 	err := r.ro.QueryRowContext(ctx,
-		r.ro.Rebind(`SELECT 1 FROM agent_profiles WHERE agent_id = ? AND deleted_at IS NOT NULL LIMIT 1`),
+		r.ro.Rebind(`SELECT 1 FROM agent_profiles
+			WHERE agent_id = ? AND deleted_at IS NOT NULL AND COALESCE(workspace_id, '') = '' LIMIT 1`),
 		agentID).Scan(&exists)
 	if errors.Is(err, sql.ErrNoRows) {
 		return false, nil
