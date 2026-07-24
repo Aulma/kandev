@@ -12,6 +12,7 @@ import {
   defaultLinearState,
   defaultOfficeState,
   defaultFeaturesState,
+  defaultAuthState,
   defaultAutomationsState,
   defaultSystemState,
 } from "./slices";
@@ -90,6 +91,7 @@ export const defaultState = {
   linearIssueWatches: defaultLinearState.linearIssueWatches,
   office: defaultOfficeState.office,
   features: defaultFeaturesState.features,
+  auth: defaultAuthState.auth,
   automations: defaultAutomationsState.automations,
   automationRuns: defaultAutomationsState.automationRuns,
   system: defaultSystemState.system,
@@ -295,9 +297,19 @@ export function mergeInitialState(initialState?: HydrationState): DefaultState {
     },
     office: { ...defaultState.office, ...initialState.office },
     features: { ...defaultState.features, ...initialState.features },
+    auth: { ...defaultState.auth, ...initialState.auth },
     automations: { ...defaultState.automations, ...initialState.automations },
     automationRuns: { ...defaultState.automationRuns, ...initialState.automationRuns },
     system: { ...defaultState.system, ...initialState.system },
+    ...mergeUIPanelState(initialState),
+  };
+}
+
+// Split out of mergeInitialState to stay under the per-function line limit —
+// these fields are the UI/panel slice of the merge and have no cross-field
+// dependencies on the rest of DefaultState.
+function mergeUIPanelState(initialState: HydrationState) {
+  return {
     previewPanel: { ...defaultState.previewPanel, ...initialState.previewPanel },
     rightPanel: { ...defaultState.rightPanel, ...initialState.rightPanel },
     diffs: { ...defaultState.diffs, ...initialState.diffs },
