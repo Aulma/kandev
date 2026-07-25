@@ -515,6 +515,24 @@ function applyForegroundActivity(
   });
 }
 
+function handleWorkspaceSourcesUpdated(
+  store: StoreApi<AppState>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  payload: any,
+): void {
+  const {
+    session_id: sessionId,
+    workspace_path: workspacePath,
+    adopted_session_ids: adoptedSessionIds,
+  } = payload;
+  const existing = store.getState().taskSessions.items[sessionId];
+  if (existing) store.getState().setTaskSession({ ...existing, worktree_path: workspacePath });
+  store.getState().reconcileWorkspaceSourcesAdopted(adoptedSessionIds ?? [sessionId]);
+  store.getState().bumpWorkspaceFilesRefresh(sessionId);
+  store.getState().clearLegacyGitStatusEntry(sessionId);
+  store.getState().bumpSessionCommitsRefetch(sessionId);
+}
+
 export function registerTaskSessionHandlers(store: StoreApi<AppState>): WsHandlers {
   return {
     "message.queue.status_changed": (message) => {
@@ -622,5 +640,7 @@ export function registerTaskSessionHandlers(store: StoreApi<AppState>): WsHandle
         updatedAt: message.timestamp,
       });
     },
+    "session.workspace_sources.updated": (message) =>
+      handleWorkspaceSourcesUpdated(store, message.payload),
   };
 }

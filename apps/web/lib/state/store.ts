@@ -615,6 +615,7 @@ export type AppState = {
   appendRunAttempt: (runId: string, attempt: RouteAttempt) => void;
   setAgentRouting: (agentId: string, data: AgentRouteData | undefined) => void;
 } & GitHubSliceActions &
+  import("./store-reexports").WorkspaceSourceStoreState &
   AzureDevOpsSliceActions &
   SystemSliceActions &
   FeaturesSliceActions &

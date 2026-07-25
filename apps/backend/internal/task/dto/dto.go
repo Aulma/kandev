@@ -133,27 +133,28 @@ type EnvironmentDTO struct {
 }
 
 type TaskDTO struct {
-	ID                          string              `json:"id"`
-	WorkspaceID                 string              `json:"workspace_id"`
-	WorkflowID                  string              `json:"workflow_id"`
-	WorkflowStepID              string              `json:"workflow_step_id"`
-	Title                       string              `json:"title"`
-	Description                 string              `json:"description"`
-	State                       v1.TaskState        `json:"state"`
-	Priority                    string              `json:"priority"`
-	Repositories                []TaskRepositoryDTO `json:"repositories,omitempty"`
-	Position                    int                 `json:"position"`
-	PrimarySessionID            *string             `json:"primary_session_id,omitempty"`
-	SessionCount                *int                `json:"session_count,omitempty"`
-	ReviewStatus                models.ReviewStatus `json:"review_status,omitempty"`
-	PrimaryExecutorID           *string             `json:"primary_executor_id,omitempty"`
-	PrimaryExecutorType         *string             `json:"primary_executor_type,omitempty"`
-	PrimaryExecutorName         *string             `json:"primary_executor_name,omitempty"`
-	PrimaryAgentName            *string             `json:"primary_agent_name,omitempty"`
-	PrimaryWorkingDirectory     *string             `json:"primary_working_directory,omitempty"`
-	PrimarySessionState         *string             `json:"primary_session_state,omitempty"`
-	PrimarySessionPendingAction *string             `json:"primary_session_pending_action"`
-	TaskPendingAction           *string             `json:"task_pending_action"`
+	ID                          string                   `json:"id"`
+	WorkspaceID                 string                   `json:"workspace_id"`
+	WorkflowID                  string                   `json:"workflow_id"`
+	WorkflowStepID              string                   `json:"workflow_step_id"`
+	Title                       string                   `json:"title"`
+	Description                 string                   `json:"description"`
+	State                       v1.TaskState             `json:"state"`
+	Priority                    string                   `json:"priority"`
+	Repositories                []TaskRepositoryDTO      `json:"repositories,omitempty"`
+	WorkspaceFolders            []TaskWorkspaceFolderDTO `json:"workspace_folders,omitempty"`
+	Position                    int                      `json:"position"`
+	PrimarySessionID            *string                  `json:"primary_session_id,omitempty"`
+	SessionCount                *int                     `json:"session_count,omitempty"`
+	ReviewStatus                models.ReviewStatus      `json:"review_status,omitempty"`
+	PrimaryExecutorID           *string                  `json:"primary_executor_id,omitempty"`
+	PrimaryExecutorType         *string                  `json:"primary_executor_type,omitempty"`
+	PrimaryExecutorName         *string                  `json:"primary_executor_name,omitempty"`
+	PrimaryAgentName            *string                  `json:"primary_agent_name,omitempty"`
+	PrimaryWorkingDirectory     *string                  `json:"primary_working_directory,omitempty"`
+	PrimarySessionState         *string                  `json:"primary_session_state,omitempty"`
+	PrimarySessionPendingAction *string                  `json:"primary_session_pending_action"`
+	TaskPendingAction           *string                  `json:"task_pending_action"`
 	// ForegroundActivity is the task-level MOST-ACTIVE-WINS activity aggregate
 	// across the task's sessions: "generating" when
 	// any session is generating, "background" when none is generating but at
@@ -201,6 +202,17 @@ type TaskRepositoryDTO struct {
 	Metadata       map[string]interface{} `json:"metadata,omitempty"`
 	CreatedAt      time.Time              `json:"created_at"`
 	UpdatedAt      time.Time              `json:"updated_at"`
+}
+
+// TaskWorkspaceFolderDTO is the API projection of a durable non-Git source.
+type TaskWorkspaceFolderDTO struct {
+	ID          string    `json:"id"`
+	TaskID      string    `json:"task_id"`
+	LocalPath   string    `json:"local_path"`
+	DisplayName string    `json:"display_name"`
+	Position    int       `json:"position"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 type TaskSessionDTO struct {
@@ -624,6 +636,18 @@ func FromTaskWithSessionInfo(
 			UpdatedAt:      repo.UpdatedAt,
 		})
 	}
+	var workspaceFolders []TaskWorkspaceFolderDTO
+	for _, folder := range task.WorkspaceFolders {
+		workspaceFolders = append(workspaceFolders, TaskWorkspaceFolderDTO{
+			ID:          folder.ID,
+			TaskID:      folder.TaskID,
+			LocalPath:   folder.LocalPath,
+			DisplayName: folder.DisplayName,
+			Position:    folder.Position,
+			CreatedAt:   folder.CreatedAt,
+			UpdatedAt:   folder.UpdatedAt,
+		})
+	}
 
 	return TaskDTO{
 		ID:                          task.ID,
@@ -635,6 +659,7 @@ func FromTaskWithSessionInfo(
 		State:                       task.State,
 		Priority:                    task.Priority,
 		Repositories:                repositories,
+		WorkspaceFolders:            workspaceFolders,
 		Position:                    task.Position,
 		PrimarySessionID:            primarySessionID,
 		SessionCount:                sessionCount,

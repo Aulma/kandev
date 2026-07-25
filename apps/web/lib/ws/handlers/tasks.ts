@@ -23,6 +23,28 @@ function hasPayloadField(payload: TaskEventPayload, field: keyof TaskEventPayloa
   return Object.prototype.hasOwnProperty.call(payload, field);
 }
 
+function preservePrimaryExecutorFields(
+  existing: KanbanTask,
+  merged: KanbanTask,
+  payload: TaskEventPayload,
+): void {
+  const primarySessionCleared =
+    hasPayloadField(payload, "primary_session_id") && payload.primary_session_id === null;
+  if (primarySessionCleared) return;
+  if (!hasPayloadField(payload, "primary_executor_id")) {
+    merged.primaryExecutorId = existing.primaryExecutorId;
+  }
+  if (!hasPayloadField(payload, "primary_executor_type")) {
+    merged.primaryExecutorType = existing.primaryExecutorType;
+  }
+  if (!hasPayloadField(payload, "primary_executor_name")) {
+    merged.primaryExecutorName = existing.primaryExecutorName;
+  }
+  if (!hasPayloadField(payload, "is_remote_executor")) {
+    merged.isRemoteExecutor = existing.isRemoteExecutor;
+  }
+}
+
 function mergeTaskUpdate(
   existing: KanbanTask | undefined,
   nextTask: KanbanTask,
@@ -48,6 +70,7 @@ function mergeTaskUpdate(
   ) {
     merged.primarySessionPendingAction = existing.primarySessionPendingAction;
   }
+  preservePrimaryExecutorFields(existing, merged, payload);
   if (
     !hasPayloadField(payload, "task_pending_action") &&
     nextTask.taskPendingAction === undefined

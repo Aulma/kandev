@@ -1497,6 +1497,12 @@ export class ApiClient {
     return this.request("GET", `/api/v1/task-sessions/${sessionId}/messages`);
   }
 
+  async listSessionTurns(sessionId: string): Promise<{
+    turns: Array<{ id: string; completed_at?: string | null }>;
+  }> {
+    return this.request("GET", `/api/v1/task-sessions/${sessionId}/turns`);
+  }
+
   async listTasks(
     workspaceId: string,
   ): Promise<{ tasks: Array<{ id: string; title: string; workflow_step_id?: string }> }> {
@@ -1544,6 +1550,13 @@ export class ApiClient {
       repository_id: string;
       base_branch: string;
       checkout_branch?: string;
+      position: number;
+    }>;
+    workspace_folders?: Array<{
+      id: string;
+      task_id: string;
+      local_path: string;
+      display_name: string;
       position: number;
     }>;
   }> {

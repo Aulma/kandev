@@ -63,6 +63,12 @@ export type KanbanState = {
       checkout_branch?: string;
       position: number;
     }>;
+    workspaceFolders?: Array<{
+      id: string;
+      local_path: string;
+      display_name: string;
+      position: number;
+    }>;
     primarySessionId?: string | null;
     primarySessionState?: string | null;
     primarySessionPendingAction?: TaskPendingAction | null;
