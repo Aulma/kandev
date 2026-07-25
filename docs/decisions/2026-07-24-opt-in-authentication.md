@@ -25,9 +25,19 @@ a login screen or any behavioral change.
 2. **Synthetic identity in disabled mode.** The global HTTP middleware (and
    WS gateway) inject `Identity{default-user, admin, Synthetic}` when auth is
    off. Downstream code branches on identity, never on mode — internal
-   callers (event bus, pollers, MCP stream) carry no identity and are
+   callers (event bus, pollers, office schedulers) carry no identity and are
    unscoped. This keeps disabled-mode behavior byte-identical and makes every
-   consumer identity-aware in one step.
+   consumer identity-aware in one step. In-session agent MCP calls arrive over
+   the agent's credential-less WebSocket stream, so they initially fell into
+   the same unscoped bucket; `internal/mcp/scope` now resolves the stream's
+   task owner and attaches that real identity before dispatch (the owning task
+   comes from the `AgentExecution`, never from the agent-supplied payload).
+   Because "no identity" means full access, that path never returns an
+   identity-free context under enforced auth: an unowned workspace is scoped to
+   a sentinel user ID that reaches unowned rows only, and an unresolvable owner
+   — deleted task/workspace row, or an account since deleted or disabled —
+   denies the dispatch. Disabling a user revokes their sessions and PATs, so
+   their still-running agent session must lose this surface too.
 3. **Opaque DB-backed credentials, not JWTs.** Sessions (`kandev_session`
    HttpOnly SameSite=Lax cookie) and personal access tokens (`kandev_pat_*`)
    are 256-bit random values stored as SHA-256 digests. Instant revocation
