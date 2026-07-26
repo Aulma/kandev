@@ -1734,6 +1734,11 @@ func (s *Service) waitForSessionReady(ctx context.Context, sessionID string) err
 	}
 }
 
+// sessionNotFoundStatus is the status-response error used for both a missing
+// session and one the caller does not own, so the response cannot be used to
+// tell the two apart.
+const sessionNotFoundStatus = "session not found"
+
 // GetTaskSessionStatus returns the status of a task session including whether it's resumable
 func (s *Service) GetTaskSessionStatus(ctx context.Context, taskID, sessionID string) (dto.TaskSessionStatusResponse, error) {
 	s.logger.Debug("checking task session status",
@@ -1745,10 +1750,17 @@ func (s *Service) GetTaskSessionStatus(ctx context.Context, taskID, sessionID st
 		TaskID:    taskID,
 	}
 
+	// Per-user scoping: a foreign session is indistinguishable from a missing
+	// one, so reuse the same response shape rather than a distinct error.
+	if err := s.authorizeSession(ctx, sessionID); err != nil {
+		resp.Error = sessionNotFoundStatus
+		return resp, nil
+	}
+
 	// 1. Load session from database
 	session, err := s.repo.GetTaskSession(ctx, sessionID)
 	if err != nil {
-		resp.Error = "session not found"
+		resp.Error = sessionNotFoundStatus
 		return resp, nil
 	}
 
@@ -2174,6 +2186,10 @@ func (s *Service) CancelTaskExecution(ctx context.Context, taskID string, reason
 
 // StopSession stops agent execution for a specific session
 func (s *Service) StopSession(ctx context.Context, sessionID string, reason string, force bool) error {
+	if err := s.authorizeSession(ctx, sessionID); err != nil {
+		return err
+	}
+
 	s.logger.Info("stopping session execution",
 		zap.String("session_id", sessionID),
 		zap.String("reason", reason),
@@ -2183,6 +2199,10 @@ func (s *Service) StopSession(ctx context.Context, sessionID string, reason stri
 
 // DeleteSession deletes a session that is not currently running.
 func (s *Service) DeleteSession(ctx context.Context, sessionID string) error {
+	if err := s.authorizeSession(ctx, sessionID); err != nil {
+		return err
+	}
+
 	session, err := s.repo.GetTaskSession(ctx, sessionID)
 	if err != nil {
 		return fmt.Errorf("session not found: %w", err)
@@ -2265,6 +2285,10 @@ func (s *Service) promoteNextPrimaryAfterRemoval(ctx context.Context, taskID, de
 // SetPrimarySession marks a session as the primary session for its task
 // and broadcasts a task.updated event so the frontend reflects the change.
 func (s *Service) SetPrimarySession(ctx context.Context, sessionID string) error {
+	if err := s.authorizeSession(ctx, sessionID); err != nil {
+		return err
+	}
+
 	if err := s.repo.SetSessionPrimary(ctx, sessionID); err != nil {
 		return fmt.Errorf("failed to set session as primary: %w", err)
 	}
@@ -2293,6 +2317,10 @@ const maxSessionNameLength = 120
 // session.state_changed event (same state) so all clients update the tab label.
 // An empty name clears the custom label, falling back to the derived title.
 func (s *Service) RenameSession(ctx context.Context, sessionID, name string) error {
+	if err := s.authorizeSession(ctx, sessionID); err != nil {
+		return err
+	}
+
 	name = strings.TrimSpace(name)
 	// Truncate by runes, not bytes — a byte slice could split a multi-byte
 	// UTF-8 sequence and persist an invalid string.
@@ -3063,6 +3091,10 @@ func (s *Service) trySwitchModel(ctx context.Context, taskID, sessionID, model, 
 
 // RespondToPermission sends a response to a permission request for a session
 func (s *Service) RespondToPermission(ctx context.Context, sessionID, pendingID, optionID string, cancelled, rejected bool) error {
+	if err := s.authorizeSession(ctx, sessionID); err != nil {
+		return err
+	}
+
 	s.logger.Debug("responding to permission request",
 		zap.String("session_id", sessionID),
 		zap.String("pending_id", pendingID),
@@ -3228,6 +3260,10 @@ func (s *Service) isCancelInFlight(sessionID string) bool {
 // turn) so the user can unstick a session whose agent subprocess crashed. Other errors
 // still fail the cancel.
 func (s *Service) CancelAgent(ctx context.Context, sessionID string) error {
+	if err := s.authorizeSession(ctx, sessionID); err != nil {
+		return err
+	}
+
 	s.logger.Debug("cancelling agent turn", zap.String("session_id", sessionID))
 
 	// Deduplicate concurrent retries. The UI's cancel button has no in-flight
@@ -3583,6 +3619,10 @@ func (s *Service) CompleteTask(ctx context.Context, taskID string) error {
 // ResetAgentContext resets the agent's conversation context for a session,
 // clearing conversation history while preserving the workspace environment.
 func (s *Service) ResetAgentContext(ctx context.Context, sessionID string) error {
+	if err := s.authorizeSession(ctx, sessionID); err != nil {
+		return err
+	}
+
 	session, err := s.repo.GetTaskSession(ctx, sessionID)
 	if err != nil {
 		return fmt.Errorf("session not found: %w", err)

@@ -13,6 +13,7 @@ package orchestrator
 import (
 	"context"
 	"errors"
+	"fmt"
 	"regexp"
 	"strings"
 	"sync"
@@ -264,6 +265,15 @@ type Service struct {
 	// Task event publisher for emitting task.updated events.
 	// Task service owns the rich payload; orchestrator delegates.
 	taskEvents TaskEventPublisher
+
+	// sessionAccessCheck enforces per-user workspace scoping on the
+	// session-keyed WS actions. Nil = unscoped. See SetSessionAccessChecker.
+	sessionAccessCheck func(ctx context.Context, sessionID string) error
+
+	// taskAccessCheck is the task-keyed sibling of sessionAccessCheck, for
+	// entry points that name a task rather than a session (session.launch,
+	// session.ensure). Nil = unscoped.
+	taskAccessCheck func(ctx context.Context, taskID string) error
 
 	// Workflow step getter for prompt building
 	workflowStepGetter WorkflowStepGetter
@@ -734,6 +744,76 @@ func (s *Service) SetTurnService(turnService TurnService) {
 // on those paths). Task service's own publishTaskEvent calls are unaffected.
 func (s *Service) SetTaskEventPublisher(publisher TaskEventPublisher) {
 	s.taskEvents = publisher
+}
+
+// SetSessionAccessChecker installs the per-user workspace scoping check used by
+// the session-keyed WS actions (task session status, session PR check). Those
+// resolve sessions through the orchestrator's own repo handle rather than the
+// task service, so they do not inherit its authorize* checks and must ask here.
+//
+// The checker must return nil for contexts without a request identity, so
+// internal callers (event bus, schedulers) stay unscoped. Nil leaves every
+// session-keyed action unscoped, which is the pre-auth behavior.
+func (s *Service) SetSessionAccessChecker(check func(ctx context.Context, sessionID string) error) {
+	s.sessionAccessCheck = check
+}
+
+// SetTaskAccessChecker installs the task-keyed sibling of
+// SetSessionAccessChecker, used by the entry points that name a task rather
+// than a session. Same contract: nil for identity-less internal callers.
+func (s *Service) SetTaskAccessChecker(check func(ctx context.Context, taskID string) error) {
+	s.taskAccessCheck = check
+}
+
+// authorizeSession applies the configured per-user session check. No-op when
+// unwired.
+func (s *Service) authorizeSession(ctx context.Context, sessionID string) error {
+	if s.sessionAccessCheck == nil || sessionID == "" {
+		return nil
+	}
+	return s.sessionAccessCheck(ctx, sessionID)
+}
+
+// authorizeTask applies the configured per-user task check. No-op when unwired.
+func (s *Service) authorizeTask(ctx context.Context, taskID string) error {
+	if s.taskAccessCheck == nil || taskID == "" {
+		return nil
+	}
+	return s.taskAccessCheck(ctx, taskID)
+}
+
+// authorizeTaskSessionPair guards an entry point that accepts BOTH a task and a
+// session ID.
+//
+// Checking only the session is not enough: the caller can pass one of their own
+// sessions to satisfy that check while pointing taskID at another user's task,
+// which the method then uses for its task-scoped work (GetTaskPR, repository
+// resolution, PR-watch creation, recoverable-failure handling). Both IDs are
+// authorized, and the pair is required to be consistent so the two arguments
+// cannot describe different tasks.
+//
+// The pair check is skipped when the session cannot be loaded: by then both IDs
+// are already authorized, so a mismatch is a caller bug rather than a
+// cross-user leak, and failing here would change behavior for identity-less
+// internal callers.
+func (s *Service) authorizeTaskSessionPair(ctx context.Context, taskID, sessionID string) error {
+	if err := s.authorizeSession(ctx, sessionID); err != nil {
+		return err
+	}
+	if err := s.authorizeTask(ctx, taskID); err != nil {
+		return err
+	}
+	if taskID == "" || sessionID == "" || s.repo == nil {
+		return nil
+	}
+	session, err := s.repo.GetTaskSession(ctx, sessionID)
+	if err != nil || session == nil {
+		return nil //nolint:nilerr // both IDs authorized; consistency is best-effort
+	}
+	if session.TaskID != taskID {
+		return fmt.Errorf("session %s does not belong to task %s", sessionID, taskID)
+	}
+	return nil
 }
 
 // publishTaskUpdated forwards to the configured TaskEventPublisher.
