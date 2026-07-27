@@ -510,6 +510,7 @@ func (s *Service) executeQueuedMessage(callerSessionID string, queuedMsg *messag
 	// here would produce the duplicate user message observed when a workflow
 	// auto-start failed transiently and the queue drained on boot_ready.
 	alreadyRecorded, _ := queuedMsg.Metadata[metaKeyUserMessageRecorded].(bool)
+	userMessageRecorded := alreadyRecorded
 	if s.messageCreator != nil && !alreadyRecorded {
 		turnID := s.getActiveTurnID(queuedMsg.SessionID)
 		if turnID == "" {
@@ -532,6 +533,8 @@ func (s *Service) executeQueuedMessage(callerSessionID string, queuedMsg *messag
 				zap.String("session_id", queuedMsg.SessionID),
 				zap.Error(err))
 			// Continue anyway - the prompt should still be sent
+		} else {
+			userMessageRecorded = true
 		}
 	} else if s.messageCreator != nil && alreadyRecorded {
 		s.logger.Debug("skipping CreateUserMessage for queued workflow auto-start; already recorded before queueing",
@@ -575,13 +578,22 @@ func (s *Service) executeQueuedMessage(callerSessionID string, queuedMsg *messag
 			zap.String("queue_id", queuedMsg.ID),
 			zap.Error(err))
 
-		if isSessionBusyError(err) || isTransientPromptError(err) ||
+		manualRecovery := isManualRecoveryPromptError(err)
+		if isSessionBusyError(err) || isTransientPromptError(err) || manualRecovery ||
 			errors.Is(err, lifecycle.ErrCancelEscalated) || isSessionResetInProgressError(err) {
-			s.logger.Warn("queued message execution failed transiently; requeueing",
+			if userMessageRecorded {
+				markQueuedUserMessageRecorded(queuedMsg)
+			}
+			s.logger.Warn("queued message execution failed; requeueing",
 				zap.String("session_id", callerSessionID),
 				zap.String("task_id", queuedMsg.TaskID),
-				zap.String("queue_id", queuedMsg.ID))
-			s.requeueMessage(promptCtx, queuedMsg, "workflow-auto-start-retry")
+				zap.String("queue_id", queuedMsg.ID),
+				zap.Bool("manual_recovery", manualRecovery))
+			if manualRecovery {
+				s.restoreQueuedMessage(promptCtx, queuedMsg)
+			} else {
+				s.requeueMessage(promptCtx, queuedMsg, "workflow-auto-start-retry")
+			}
 			return
 		}
 
@@ -595,6 +607,31 @@ func (s *Service) executeQueuedMessage(callerSessionID string, queuedMsg *messag
 			zap.String("queue_id", queuedMsg.ID),
 			zap.String("content_preview", queuedMsg.Content[:min(50, len(queuedMsg.Content))]))
 	}
+}
+
+func (s *Service) restoreQueuedMessage(ctx context.Context, queuedMsg *messagequeue.QueuedMessage) {
+	restored, err := s.messageQueue.RestoreMessage(ctx, queuedMsg)
+	if err != nil {
+		s.logger.Error("failed to restore queued message",
+			zap.String("session_id", queuedMsg.SessionID),
+			zap.String("task_id", queuedMsg.TaskID),
+			zap.String("queue_id", queuedMsg.ID),
+			zap.Error(err))
+		return
+	}
+	s.logger.Info("message restored for manual recovery",
+		zap.String("session_id", restored.SessionID),
+		zap.String("task_id", restored.TaskID),
+		zap.String("queue_id", restored.ID),
+		zap.Int64("position", restored.Position))
+	s.publishQueueStatusEvent(ctx, queuedMsg.SessionID)
+}
+
+func markQueuedUserMessageRecorded(queuedMsg *messagequeue.QueuedMessage) {
+	if queuedMsg.Metadata == nil {
+		queuedMsg.Metadata = make(map[string]interface{})
+	}
+	queuedMsg.Metadata[metaKeyUserMessageRecorded] = true
 }
 
 func metadataWithoutEntityReferences(metadata map[string]interface{}) map[string]interface{} {
