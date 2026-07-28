@@ -51,6 +51,9 @@ the user's own agent picks up immediately — turning every report into a contri
 - The `improve-kandev` workflow is hidden from the workflow management page in
   workspace settings and from the workflow picker in the standard task-create
   dialog. It is reachable only through the Improve Kandev entry point.
+- Hidden workflows do not count as choices in the standard task-create dialog.
+  When the active workspace has exactly one visible workflow, the dialog uses
+  that workflow implicitly and omits the redundant workflow selector.
 - The `report-kandev-issue` workflow is also hidden and reachable only through
   the **Open issue** option. Its agent reads the repository's current bug-report
   or feature-request issue form, gathers every required field from the user,
@@ -133,6 +136,11 @@ the user's own agent picks up immediately — turning every report into a contri
 - **GIVEN** GitHub reports that the user cannot fork `kdlbs/kandev`, **WHEN**
   they select **Open issue**, **THEN** they can create the report task because
   that workflow does not require a fork.
+
+- **GIVEN** the active workspace has one visible workflow and one or more hidden
+  workflows, **WHEN** the user opens the standard task-create dialog without an
+  explicit workflow, **THEN** the visible workflow is selected implicitly and
+  the workflow selector does not appear.
 
 - **GIVEN** the user has not configured `gh auth`, **WHEN** they open the
   Improve Kandev dialog, **THEN** the dialog shows a blocking error referencing
