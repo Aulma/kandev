@@ -22,7 +22,7 @@ import { useResponsiveBreakpoint } from "@/hooks/use-responsive-breakpoint";
 import { MobileColumnTabs } from "./mobile-column-tabs";
 import { SwipeableColumns } from "./swipeable-columns";
 import { MobileDropTargets } from "./mobile-drop-targets";
-import { getKanbanColumnGridTemplate } from "./kanban-grid-template";
+import { AdaptiveDesktopKanban } from "./adaptive-desktop-kanban";
 import type { KanbanState } from "@/lib/state/slices/kanban/types";
 import type { MobileWorkflowNavigation } from "@/lib/kanban/view-registry";
 import { compareTasksByCreatedDesc } from "@/lib/kanban/task-order";
@@ -431,24 +431,15 @@ function DesktopKanbanLayout({
   onToggleSelect,
   onSelectRange,
   isMultiSelectMode,
-  isCompactDesktop,
   externalLinkAvailability,
-}: SharedKanbanLayoutProps & {
-  isCompactDesktop: boolean;
-}) {
+}: SharedKanbanLayoutProps) {
   const getTasksForStep = useTasksByStep(tasks);
 
   return (
-    <div
-      data-testid="desktop-kanban-layout"
-      className="grid min-w-full gap-0"
-      style={{
-        gridTemplateColumns: getKanbanColumnGridTemplate(steps.length, isCompactDesktop),
-      }}
-    >
-      {steps.map((step) => (
+    <AdaptiveDesktopKanban
+      steps={steps}
+      renderColumn={(step) => (
         <KanbanColumn
-          key={step.id}
           step={step}
           tasks={getTasksForStep(step.id)}
           onPreviewTask={onPreviewTask}
@@ -467,8 +458,8 @@ function DesktopKanbanLayout({
           isMultiSelectMode={isMultiSelectMode}
           externalLinkAvailability={externalLinkAvailability}
         />
-      ))}
-    </div>
+      )}
+    />
   );
 }
 
@@ -479,7 +470,6 @@ function DesktopKanbanLayout({
 function renderKanbanLayout({
   isMobile,
   isTablet,
-  isCompactDesktop,
   sharedProps,
   activeIndex,
   setActiveIndex,
@@ -488,7 +478,6 @@ function renderKanbanLayout({
 }: {
   isMobile: boolean;
   isTablet: boolean;
-  isCompactDesktop: boolean;
   sharedProps: SharedKanbanLayoutProps;
   activeIndex: number;
   setActiveIndex: (index: number) => void;
@@ -509,11 +498,7 @@ function renderKanbanLayout({
   if (isTablet) {
     return <TabletKanbanLayout {...sharedProps} />;
   }
-  return (
-    <div className="h-full overflow-x-auto">
-      <DesktopKanbanLayout {...sharedProps} isCompactDesktop={isCompactDesktop} />
-    </div>
-  );
+  return <DesktopKanbanLayout {...sharedProps} />;
 }
 
 export function SwimlaneKanbanContent({
@@ -535,7 +520,7 @@ export function SwimlaneKanbanContent({
   isMultiSelectMode,
   mobileWorkflowNavigation,
 }: SwimlaneKanbanContentProps) {
-  const { isMobile, isTablet, isCompactDesktop } = useResponsiveBreakpoint();
+  const { isMobile, isTablet } = useResponsiveBreakpoint();
   const activeWorkspaceId = useAppStore((state) => state.workspaces.activeId);
   const externalLinkAvailability = useKanbanExternalLinkAvailability(activeWorkspaceId);
 
@@ -600,7 +585,6 @@ export function SwimlaneKanbanContent({
   const layoutContent = renderKanbanLayout({
     isMobile,
     isTablet,
-    isCompactDesktop,
     sharedProps,
     activeIndex,
     setActiveIndex,
