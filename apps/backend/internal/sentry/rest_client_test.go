@@ -309,6 +309,78 @@ func TestBuildIssueQueryString(t *testing.T) {
 	}
 }
 
+// TestBuildIssueQueryString_StatsPeriodBecomesAgeFilter locks in the fix for
+// the "older issues get processed by a watch configured for the last 24h"
+// bug: Sentry's statsPeriod query param does NOT filter which issues a
+// search returns (it only sizes the per-issue stats window — see
+// https://github.com/getsentry/sentry/issues/36375). The only way to
+// actually restrict results to recently-first-seen issues is the `age:`
+// search token, so StatsPeriod must be translated into one.
+func TestBuildIssueQueryString_StatsPeriodBecomesAgeFilter(t *testing.T) {
+	if got := buildIssueQueryString(SearchFilter{StatsPeriod: "24h"}); got != "age:-24h" {
+		t.Errorf("expected age:-24h, got %q", got)
+	}
+
+	got := buildIssueQueryString(SearchFilter{Levels: []string{"error"}, StatsPeriod: "7d"})
+	if !strings.Contains(got, "level:error") || !strings.Contains(got, "age:-7d") {
+		t.Errorf("expected level and age tokens combined, got %q", got)
+	}
+
+	// An unrecognized period is dropped rather than injected verbatim into
+	// the Sentry search-bar query string.
+	if got := buildIssueQueryString(SearchFilter{StatsPeriod: "not-a-period"}); got != "" {
+		t.Errorf("expected malformed statsPeriod to be ignored, got %q", got)
+	}
+
+	// No StatsPeriod configured -> no age token (unchanged behaviour).
+	if got := buildIssueQueryString(SearchFilter{Query: "boom"}); got != "boom" {
+		t.Errorf("expected no age token without statsPeriod, got %q", got)
+	}
+}
+
+// TestStatsPeriodAgeToken_RejectsSameOutOfRangeValuesAsMock locks in a
+// CodeRabbit review finding on this PR: statsPeriodAgeToken (REST) and
+// parseStatsPeriod (mock_client.go) must accept/reject the exact same
+// StatsPeriod values via the shared parseStatsPeriodUnits, or a value like
+// "3651w" would filter live Sentry queries while a mock-backed test silently
+// treated it as unfiltered (or vice versa). Mirrors
+// TestParseStatsPeriod_RejectsOverflowRisk in mock_client_test.go.
+func TestStatsPeriodAgeToken_RejectsSameOutOfRangeValuesAsMock(t *testing.T) {
+	for _, period := range []string{"999999999999w", "999999999999d", "0h", "3651w"} {
+		if got := statsPeriodAgeToken(period); got != "" {
+			t.Errorf("statsPeriodAgeToken(%q) should be rejected, got %q", period, got)
+		}
+	}
+	if got := statsPeriodAgeToken("3650w"); got != "age:-3650w" {
+		t.Errorf("statsPeriodAgeToken(%q) at the bound should be accepted, got %q", "3650w", got)
+	}
+}
+
+// TestBuildIssueQueryString_ParenthesizesQueryWithOrOperator locks in the fix
+// for a Codex review finding on this PR: Sentry's search grammar ANDs
+// implicitly-adjacent terms tighter than an explicit `OR`, so appending a
+// level/status/age token directly after a free-text query containing `OR`
+// silently scoped that token to only the last OR-branch (`foo OR bar
+// age:-24h` parsed as `foo OR (bar age:-24h)`, letting an old "foo" issue
+// bypass the age filter). The query must be parenthesized before combining.
+func TestBuildIssueQueryString_ParenthesizesQueryWithOrOperator(t *testing.T) {
+	if got := buildIssueQueryString(SearchFilter{Query: "foo OR bar", StatsPeriod: "24h"}); got != "(foo OR bar) age:-24h" {
+		t.Errorf("expected OR query parenthesized before the age token, got %q", got)
+	}
+
+	if got := buildIssueQueryString(SearchFilter{Levels: []string{"error"}, Query: "foo OR bar"}); got != "level:error (foo OR bar)" {
+		t.Errorf("expected OR query parenthesized after the level token, got %q", got)
+	}
+
+	// A standalone query (nothing else to AND against) is left unwrapped —
+	// parenthesizing it would be a no-op, and this locks in that the literal
+	// query string a user typed is left untouched when there's nothing to
+	// combine it with.
+	if got := buildIssueQueryString(SearchFilter{Query: "foo OR bar"}); got != "foo OR bar" {
+		t.Errorf("expected standalone OR query left unwrapped, got %q", got)
+	}
+}
+
 // TestNewRESTClient_BuildsEndpointFromConfigURL locks in that a self-hosted
 // instance URL becomes the API base with the /api/0 suffix appended, that a
 // trailing slash and missing scheme are normalized, and that an empty URL
