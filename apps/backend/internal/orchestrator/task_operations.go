@@ -2818,7 +2818,7 @@ func (s *Service) saveArchiveCommits(ctx context.Context, sessionID string, comm
 // If planMode is true, a plan mode prefix is prepended to the prompt.
 // Attachments (images) are passed through to the agent if provided.
 func (s *Service) PromptTask(ctx context.Context, taskID, sessionID string, prompt string, model string, planMode bool, attachments []v1.MessageAttachment, dispatchOnly bool) (*PromptResult, error) {
-	return s.promptTask(ctx, taskID, sessionID, prompt, model, planMode, attachments, dispatchOnly, "")
+	return s.promptTask(ctx, taskID, sessionID, prompt, model, planMode, attachments, dispatchOnly, "", false, nil)
 }
 
 // promptTask is PromptTask's implementation, taking an additional
@@ -2848,24 +2848,13 @@ func (s *Service) PromptTask(ctx context.Context, taskID, sessionID string, prom
 // those are covered by executeQueuedMessage's own deferred cleanup
 // instead (clearQueuedDispatchInFlightIfCurrent), which is safe since
 // none of them block on an agent turn.
-func (s *Service) promptTask(ctx context.Context, taskID, sessionID string, prompt string, model string, planMode bool, attachments []v1.MessageAttachment, dispatchOnly bool, claimEntryID string) (*PromptResult, error) {
-	s.logger.Debug("PromptTask called",
-		zap.String("task_id", taskID),
-		zap.String("session_id", sessionID),
-		zap.Int("prompt_length", len(prompt)),
-		zap.String("requested_model", model),
-		zap.Bool("plan_mode", planMode),
-		zap.Int("attachments_count", len(attachments)),
-		zap.Bool("dispatch_only", dispatchOnly))
-	if sessionID == "" {
-		return nil, fmt.Errorf("session_id is required")
-	}
-	if s.isSessionResetInProgress(sessionID) {
-		return nil, ErrSessionResetInProgress
+func (s *Service) promptTask(ctx context.Context, taskID, sessionID string, prompt string, model string, planMode bool, attachments []v1.MessageAttachment, dispatchOnly bool, claimEntryID string, lifecyclePrompt bool, afterClaim func() error) (*PromptResult, error) {
+	s.logPromptTaskCall(taskID, sessionID, prompt, model, planMode, attachments, dispatchOnly)
+	if err := s.validatePromptTaskStart(sessionID); err != nil {
+		return nil, err
 	}
 
 	// Only allow prompts when the session is ready for input.
-	// Reject when the agent is still starting, already processing, or in a terminal state.
 	session, err := s.loadPromptableSession(ctx, taskID, sessionID)
 	if err != nil {
 		return nil, err
@@ -2916,22 +2905,19 @@ func (s *Service) promptTask(ctx context.Context, taskID, sessionID string, prom
 		return result, switchErr
 	}
 
-	previousSessionState := session.State
-
 	// Cache the raw prompt so a transient-provider-error (529) retry can
 	// re-drive this turn after backoff without the caller's context. Stores
 	// the pre-injection prompt; PromptTask re-applies config/plan transforms.
 	s.rememberTurnPrompt(sessionID, prompt, model, planMode, attachments)
 
-	claimedSession, err := s.claimSessionRunningForPrompt(
-		ctx, taskID, sessionID, claimEntryID, session, foregroundClaim,
+	session, rollback, err := s.claimPromptDispatch(
+		ctx, taskID, sessionID, claimEntryID, lifecyclePrompt,
+		afterClaim, session, foregroundClaim,
 	)
 	if err != nil {
 		s.rollbackForegroundDispatchOnFailure(ctx, taskID, sessionID, foregroundDispatch)
 		return nil, err
 	}
-	session = claimedSession
-	s.startTurnForSession(ctx, sessionID)
 	// beginForegroundDispatch atomically established foreground-generating
 	// ownership before any cleanup/provider event could interleave. Publish that
 	// flip now that session admission succeeded; claimed RUNNING prompts also need
@@ -2954,12 +2940,41 @@ func (s *Service) promptTask(ctx context.Context, taskID, sessionID string, prom
 	)
 	if err != nil {
 		s.rollbackForegroundDispatchOnFailure(ctx, taskID, sessionID, foregroundDispatch)
-		return s.handlePromptDispatchFailure(ctx, taskID, sessionID, prompt, planMode, resumedForPrompt, attachments, previousSessionState, err)
+		return s.handlePromptDispatchFailure(
+			ctx, taskID, sessionID, prompt, planMode, resumedForPrompt,
+			attachments, rollback, lifecyclePrompt, err,
+		)
 	}
 	return &PromptResult{
 		StopReason:   result.StopReason,
 		AgentMessage: result.AgentMessage,
 	}, nil
+}
+
+func (s *Service) validatePromptTaskStart(sessionID string) error {
+	if sessionID == "" {
+		return fmt.Errorf("session_id is required")
+	}
+	if s.isSessionResetInProgress(sessionID) {
+		return ErrSessionResetInProgress
+	}
+	return nil
+}
+
+func (s *Service) logPromptTaskCall(
+	taskID, sessionID, prompt, model string,
+	planMode bool,
+	attachments []v1.MessageAttachment,
+	dispatchOnly bool,
+) {
+	s.logger.Debug("PromptTask called",
+		zap.String("task_id", taskID),
+		zap.String("session_id", sessionID),
+		zap.Int("prompt_length", len(prompt)),
+		zap.String("requested_model", model),
+		zap.Bool("plan_mode", planMode),
+		zap.Int("attachments_count", len(attachments)),
+		zap.Bool("dispatch_only", dispatchOnly))
 }
 
 func (s *Service) loadPromptableSession(ctx context.Context, taskID, sessionID string) (*models.TaskSession, error) {
@@ -3027,13 +3042,202 @@ func (s *Service) trySwitchModelForPrompt(ctx context.Context, taskID, sessionID
 	return result, true, nil
 }
 
+type promptClaimRollback struct {
+	previousSessionState models.TaskSessionState
+	previousTaskState    v1.TaskState
+	taskStateClaimed     bool
+	turnID               string
+	createdTurn          bool
+}
+
+func (s *Service) claimPromptDispatch(
+	ctx context.Context,
+	taskID, sessionID, claimEntryID string,
+	lifecyclePrompt bool,
+	afterClaim func() error,
+	session *models.TaskSession,
+	foregroundClaim *foregroundClaim,
+) (*models.TaskSession, promptClaimRollback, error) {
+	if lifecyclePrompt {
+		return s.claimLifecyclePromptDispatch(
+			ctx, taskID, sessionID, claimEntryID, afterClaim,
+		)
+	}
+	rollback := promptClaimRollback{previousSessionState: session.State}
+	claimed, err := s.claimSessionRunningForPrompt(
+		ctx, taskID, sessionID, claimEntryID, session, foregroundClaim,
+	)
+	if err != nil {
+		return nil, promptClaimRollback{}, err
+	}
+	rollback.turnID, rollback.createdTurn = s.startTurnForSessionWithOwnership(ctx, sessionID)
+	return claimed, rollback, nil
+}
+
+func (s *Service) claimLifecyclePromptDispatch(
+	ctx context.Context,
+	taskID, sessionID, claimEntryID string,
+	afterClaim func() error,
+) (*models.TaskSession, promptClaimRollback, error) {
+	session, previousSessionState, err := s.claimLifecycleSessionRunning(
+		ctx, taskID, sessionID, claimEntryID,
+	)
+	if err != nil {
+		return nil, promptClaimRollback{}, err
+	}
+	rollback := promptClaimRollback{previousSessionState: previousSessionState}
+	rollback.previousTaskState, rollback.taskStateClaimed, err = s.reconcileLifecycleClaim(
+		ctx, taskID, sessionID, previousSessionState, session,
+	)
+	if err != nil {
+		return nil, promptClaimRollback{}, err
+	}
+	rollback.turnID, rollback.createdTurn = s.startTurnForSessionWithOwnership(ctx, sessionID)
+	if err := s.acknowledgePromptClaim(ctx, taskID, sessionID, afterClaim, rollback); err != nil {
+		return nil, promptClaimRollback{}, err
+	}
+	return session, rollback, nil
+}
+
+func (s *Service) acknowledgePromptClaim(
+	ctx context.Context,
+	taskID, sessionID string,
+	afterClaim func() error,
+	rollback promptClaimRollback,
+) error {
+	if afterClaim == nil {
+		return nil
+	}
+	if err := afterClaim(); err != nil {
+		s.rollbackPromptClaim(ctx, taskID, sessionID, rollback)
+		if errors.Is(err, errLifecyclePromptReservationSuperseded) {
+			return err
+		}
+		return fmt.Errorf("%w: %v", errLifecyclePromptMessagePersistence, err)
+	}
+	return nil
+}
+
+func (s *Service) rollbackPromptClaim(
+	ctx context.Context,
+	taskID, sessionID string,
+	rollback promptClaimRollback,
+) {
+	s.restoreLifecycleClaim(ctx, taskID, sessionID, rollback.previousSessionState)
+	if rollback.taskStateClaimed {
+		s.restoreLifecycleTaskState(ctx, taskID, rollback.previousTaskState)
+	}
+	if rollback.createdTurn {
+		s.completeTurnIfCurrent(ctx, sessionID, rollback.turnID)
+	}
+}
+
+// reconcileLifecycleClaim makes the atomic SQLite RUNNING claim observable to
+// the task runtime before a lifecycle prompt creates visible work or reaches
+// the executor.
+func (s *Service) reconcileLifecycleClaim(
+	ctx context.Context,
+	taskID, sessionID string,
+	previousState models.TaskSessionState,
+	session *models.TaskSession,
+) (v1.TaskState, bool, error) {
+	previousTaskState, taskStateClaimed, err := s.claimLifecycleTaskState(ctx, taskID, sessionID)
+	if err != nil {
+		s.restoreLifecycleClaim(ctx, taskID, sessionID, previousState)
+		return "", false, fmt.Errorf("%w: reconcile lifecycle task state: %v", errLifecyclePromptClaim, err)
+	}
+	if session == nil || session.State != models.TaskSessionStateRunning {
+		s.restoreLifecycleClaim(ctx, taskID, sessionID, previousState)
+		if taskStateClaimed {
+			s.restoreLifecycleTaskState(ctx, taskID, previousTaskState)
+		}
+		return "", false, fmt.Errorf("%w: lifecycle claim no longer owns running session", errLifecyclePromptClaim)
+	}
+	s.publishTaskSessionStateChanged(
+		ctx, taskID, sessionID, previousState, models.TaskSessionStateRunning,
+		"", &session.UpdatedAt, session,
+	)
+	return previousTaskState, taskStateClaimed, nil
+}
+
+func (s *Service) claimLifecycleTaskState(
+	ctx context.Context,
+	taskID, sessionID string,
+) (v1.TaskState, bool, error) {
+	s.taskRuntimeStateMu.Lock()
+	defer s.taskRuntimeStateMu.Unlock()
+
+	task, err := s.repo.GetTask(ctx, taskID)
+	if err != nil {
+		return "", false, err
+	}
+	if task == nil || taskArchived(task) || task.AssigneeAgentProfileID != "" {
+		return "", false, nil
+	}
+	taskState, err := s.taskRepo.GetTask(ctx, taskID)
+	if err != nil {
+		return "", false, err
+	}
+	previousTaskState := task.State
+	if taskState != nil {
+		previousTaskState = taskState.State
+	}
+	session, err := s.repo.GetTaskSession(ctx, sessionID)
+	if err != nil {
+		return "", false, err
+	}
+	if !runtimeSessionOwnsTaskState(session, v1.TaskStateInProgress) {
+		return previousTaskState, false, nil
+	}
+	updated, err := s.taskRepo.UpdateTaskStateIfSessionState(
+		ctx, taskID, sessionID, session.State, v1.TaskStateInProgress,
+	)
+	if err != nil {
+		return "", false, err
+	}
+	return previousTaskState, updated, nil
+}
+
+func (s *Service) restoreLifecycleTaskState(
+	ctx context.Context,
+	taskID string,
+	previousState v1.TaskState,
+) {
+	if previousState == "" {
+		return
+	}
+	updated, err := s.taskRepo.UpdateTaskStateIfCurrentIn(
+		ctx, taskID, previousState, []v1.TaskState{v1.TaskStateInProgress},
+	)
+	if err != nil {
+		s.logger.Error("failed to restore task state after lifecycle prompt rejection",
+			zap.String("task_id", taskID),
+			zap.String("previous_state", string(previousState)),
+			zap.Error(err))
+		return
+	}
+	if !updated {
+		s.logger.Debug("skipped lifecycle task-state restore after concurrent transition",
+			zap.String("task_id", taskID),
+			zap.String("previous_state", string(previousState)))
+	}
+}
+
 // handlePromptDispatchFailure handles a failed executor.Prompt call from
 // promptTask. If the failure is the specific "missing execution" error a
 // just-resumed session can hit (see promptTask's resumedForPrompt comment),
 // it falls back to a fresh launch instead of surfacing the error to the
 // caller. Otherwise — or if that fallback launch itself fails — it
 // delegates to handlePromptError for the caller-facing result.
-func (s *Service) handlePromptDispatchFailure(ctx context.Context, taskID, sessionID, prompt string, planMode, resumedForPrompt bool, attachments []v1.MessageAttachment, previousSessionState models.TaskSessionState, promptErr error) (*PromptResult, error) {
+func (s *Service) handlePromptDispatchFailure(
+	ctx context.Context,
+	taskID, sessionID, prompt string,
+	planMode, resumedForPrompt bool,
+	attachments []v1.MessageAttachment,
+	rollback promptClaimRollback,
+	lifecyclePrompt bool,
+	promptErr error,
+) (*PromptResult, error) {
 	if resumedForPrompt && errors.Is(promptErr, executor.ErrExecutionNotFound) {
 		s.logger.Warn("prompt after lazy resume hit missing execution; falling back to fresh launch",
 			zap.String("task_id", taskID),
@@ -3046,7 +3250,11 @@ func (s *Service) handlePromptDispatchFailure(ctx context.Context, taskID, sessi
 			promptErr = freshErr
 		}
 	}
-	return nil, s.handlePromptError(ctx, taskID, sessionID, previousSessionState, promptErr)
+	if lifecyclePrompt {
+		s.rollbackPromptClaim(ctx, taskID, sessionID, rollback)
+		return nil, promptErr
+	}
+	return nil, s.handlePromptError(ctx, taskID, sessionID, rollback.previousSessionState, promptErr)
 }
 
 // effectivePromptForSession applies promptTask's config-mode and plan-mode
@@ -3065,6 +3273,21 @@ func (s *Service) effectivePromptForSession(sessionID, prompt string, planMode b
 		effectivePrompt = sysprompt.InjectPlanMode(effectivePrompt)
 	}
 	return effectivePrompt
+}
+
+var (
+	errLifecyclePromptInactive              = errors.New("lifecycle prompt task or session is inactive")
+	errLifecyclePromptClaim                 = errors.New("lifecycle prompt claim failed")
+	errLifecyclePromptMessagePersistence    = errors.New("lifecycle prompt message persistence failed")
+	errLifecyclePromptReservationSuperseded = errors.New("lifecycle prompt reservation was superseded")
+)
+
+type lifecyclePromptReselectedError struct {
+	sessionID string
+}
+
+func (e *lifecyclePromptReselectedError) Error() string {
+	return fmt.Sprintf("lifecycle prompt session reselected: %s", e.sessionID)
 }
 
 // claimSessionRunningForPrompt marks sessionID RUNNING immediately before
@@ -3136,6 +3359,74 @@ func (s *Service) claimSessionRunningForPrompt(
 		s.clearQueuedDispatchInFlightIfCurrent(sessionID, claimEntryID)
 	}
 	return freshSession, nil
+}
+
+func (s *Service) claimLifecycleSessionRunning(
+	ctx context.Context,
+	taskID, sessionID, claimEntryID string,
+) (*models.TaskSession, models.TaskSessionState, error) {
+	lock, release := s.acquireCancelInFlightGuard(sessionID)
+	defer release()
+	lock.Lock()
+	defer lock.Unlock()
+
+	if claimEntryID != "" && !s.isCurrentQueuedDispatch(sessionID, claimEntryID) {
+		return nil, "", errQueuedDispatchSuperseded
+	}
+	if err := s.validateLifecyclePromptSelection(ctx, taskID, sessionID); err != nil {
+		return nil, "", err
+	}
+	claim, err := s.repo.ClaimPromptableTaskSessionIfActive(ctx, sessionID)
+	if err != nil {
+		return nil, "", fmt.Errorf("%w: %v", errLifecyclePromptClaim, err)
+	}
+	switch claim.Status {
+	case models.PromptableTaskSessionInactive:
+		return nil, "", errLifecyclePromptInactive
+	case models.PromptableTaskSessionBusy:
+		return nil, "", fmt.Errorf("%w: lifecycle prompt session is busy", ErrAgentPromptInProgress)
+	}
+	if claimEntryID != "" && !s.isCurrentQueuedDispatch(sessionID, claimEntryID) {
+		s.restoreLifecycleClaim(ctx, taskID, sessionID, claim.PreviousState)
+		return nil, "", errQueuedDispatchSuperseded
+	}
+	if s.isSessionResetInProgress(sessionID) {
+		s.restoreLifecycleClaim(ctx, taskID, sessionID, claim.PreviousState)
+		return nil, "", ErrSessionResetInProgress
+	}
+	freshSession, err := s.repo.GetTaskSession(ctx, sessionID)
+	if err != nil || freshSession == nil {
+		s.restoreLifecycleClaim(ctx, taskID, sessionID, claim.PreviousState)
+		return nil, "", errLifecyclePromptInactive
+	}
+	s.clearQueuedDispatchInFlightIfCurrent(sessionID, claimEntryID)
+	return freshSession, claim.PreviousState, nil
+}
+
+func (s *Service) validateLifecyclePromptSelection(
+	ctx context.Context,
+	taskID, sessionID string,
+) error {
+	selectedSession, err := s.resolveTaskPRAgentSession(ctx, taskID)
+	if err != nil || selectedSession == nil {
+		task, taskErr := s.repo.GetTask(ctx, taskID)
+		if taskErr != nil || task == nil || task.ArchivedAt != nil {
+			return errLifecyclePromptInactive
+		}
+		return fmt.Errorf("%w: no promptable lifecycle session", ErrAgentPromptInProgress)
+	}
+	if selectedSession.ID != sessionID {
+		return &lifecyclePromptReselectedError{sessionID: selectedSession.ID}
+	}
+	return nil
+}
+
+func (s *Service) restoreLifecycleClaim(
+	ctx context.Context,
+	taskID, sessionID string,
+	previousState models.TaskSessionState,
+) {
+	s.updateTaskSessionState(ctx, taskID, sessionID, previousState, "", false)
 }
 
 func (s *Service) recheckPromptableWithForegroundClaim(
