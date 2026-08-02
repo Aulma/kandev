@@ -215,6 +215,7 @@ type Repos struct {
 	TaskEnvironments  repository.TaskEnvironmentRepository
 	Reviews           repository.ReviewRepository
 	ResourceCleanups  repository.TaskResourceCleanupRepository
+	StatusSummaries   repository.TaskStatusSummaryRepository
 }
 
 // Service provides task business logic
@@ -235,6 +236,8 @@ type Service struct {
 	taskEnvironments            repository.TaskEnvironmentRepository
 	reviews                     repository.ReviewRepository
 	resourceCleanups            repository.TaskResourceCleanupRepository
+	statusSummaries             repository.TaskStatusSummaryRepository
+	statusSummaryPRs            TaskStatusSummaryPRReader
 	eventBus                    bus.EventBus
 	logger                      *logger.Logger
 	discoveryConfig             RepositoryDiscoveryConfig
@@ -316,6 +319,7 @@ func NewService(repos Repos, eventBus bus.EventBus, log *logger.Logger, discover
 		taskEnvironments:      repos.TaskEnvironments,
 		reviews:               repos.Reviews,
 		resourceCleanups:      repos.ResourceCleanups,
+		statusSummaries:       repos.StatusSummaries,
 		eventBus:              eventBus,
 		logger:                log,
 		discoveryConfig:       discoveryConfig,
