@@ -128,8 +128,10 @@ func IsAgentTitlePending(metadata map[string]interface{}) bool {
 // workflow_switch means the session profile was selected by workflow routing
 // rather than direct user selection.
 const (
-	SessionMetaKeyCreatedBy        = "created_by"
-	SessionCreatedByWorkflowSwitch = "workflow_switch"
+	SessionMetaKeyCreatedBy              = "created_by"
+	SessionCreatedByWorkflowSwitch       = "workflow_switch"
+	SessionMetaKeyContextWindow          = "context_window"
+	SessionMetaKeyContextCompactionCount = "context_compaction_count"
 )
 
 // SessionMetaKeySessionMode records the agent's last-known session permission

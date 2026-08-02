@@ -426,30 +426,29 @@ func (s *Service) handleContextWindowUpdated(ctx context.Context, data watcher.C
 		"source":     source,
 	}
 
-	// Persist to database asynchronously using json_set to atomically set one
-	// key without clobbering other metadata keys (plan_mode, prepare_result).
-	// The generation check prevents a pre-reset update from resurrecting stale
-	// usage after resetAgentContext clears the metadata.
-	go func() {
-		persisted, err := s.persistAndPublishContextWindowUpdate(
-			context.Background(), data.TaskID, data.TaskSessionID, generation, contextWindowData,
-		)
-		switch {
-		case err != nil:
-			s.logger.Error("failed to update session with context window",
-				zap.String("task_id", data.TaskID),
-				zap.String("session_id", data.TaskSessionID),
-				zap.Error(err))
-		case !persisted:
-			s.logger.Debug("discarded stale context window update after reset",
-				zap.String("task_id", data.TaskID),
-				zap.String("session_id", data.TaskSessionID))
-		default:
-			s.logger.Debug("persisted context window to session",
-				zap.String("task_id", data.TaskID),
-				zap.String("session_id", data.TaskSessionID))
-		}
-	}()
+	// Persist synchronously using json_set to atomically set one key without
+	// clobbering other metadata keys (plan_mode, prepare_result). The watcher
+	// delivers updates in arrival order; keeping persistence in this callback
+	// preserves that order instead of letting independent goroutines reorder
+	// samples and produce an incorrect compaction count.
+	persisted, err := s.persistAndPublishContextWindowUpdate(
+		context.Background(), data.TaskID, data.TaskSessionID, generation, contextWindowData,
+	)
+	switch {
+	case err != nil:
+		s.logger.Error("failed to update session with context window",
+			zap.String("task_id", data.TaskID),
+			zap.String("session_id", data.TaskSessionID),
+			zap.Error(err))
+	case !persisted:
+		s.logger.Debug("discarded stale context window update after reset",
+			zap.String("task_id", data.TaskID),
+			zap.String("session_id", data.TaskSessionID))
+	default:
+		s.logger.Debug("persisted context window to session",
+			zap.String("task_id", data.TaskID),
+			zap.String("session_id", data.TaskSessionID))
+	}
 }
 
 func (s *Service) persistAndPublishContextWindowUpdate(
@@ -458,7 +457,7 @@ func (s *Service) persistAndPublishContextWindowUpdate(
 	generation uint64,
 	contextWindowData map[string]interface{},
 ) (bool, error) {
-	persisted, err := s.persistContextWindowUpdate(ctx, sessionID, generation, contextWindowData)
+	persisted, count, err := s.persistContextWindowUpdate(ctx, sessionID, generation, contextWindowData)
 	if !persisted || err != nil || s.eventBus == nil {
 		return persisted, err
 	}
@@ -469,7 +468,8 @@ func (s *Service) persistAndPublishContextWindowUpdate(
 			"task_id":    taskID,
 			"session_id": sessionID,
 			"metadata": map[string]interface{}{
-				contextWindowMetadataKey: contextWindowData,
+				contextWindowMetadataKey:                    contextWindowData,
+				models.SessionMetaKeyContextCompactionCount: count,
 			},
 		},
 	))
