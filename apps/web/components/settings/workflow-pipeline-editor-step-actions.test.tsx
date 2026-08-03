@@ -47,10 +47,14 @@ describe("TurnCompleteSelect cancel completion policy", () => {
     const checkbox = screen.getByTestId("step-1-cancel-completion-checkbox");
 
     expect(checkbox.getAttribute("aria-checked")).toBe("false");
+    // This file stubs react-i18next with an identity `t`, so keys render as
+    // keys. `HelpTip`'s default aria-label is now a catalog key rather than a
+    // hardcoded string, so the expectation follows the same convention as the
+    // queryByText below.
     expect(screen.getByTestId("step-1-cancel-completion-help").getAttribute("aria-label")).toBe(
-      "More information",
+      "workflows:moreInformation",
     );
-    expect(screen.queryByText("settings:runCompletionActionsWhenTurnCancelledHelp")).toBeNull();
+    expect(screen.queryByText("workflows:runCompletionActionsWhenTurnCancelledHelp")).toBeNull();
     fireEvent.click(checkbox);
     expect(onUpdate).toHaveBeenCalledWith({ cancel_triggers_turn_complete: true });
   });
