@@ -19,9 +19,9 @@ type MobilePluginNavSectionProps = {
  */
 export function MobilePluginNavSection({ onNavigate }: MobilePluginNavSectionProps) {
   const registry = usePluginRegistry();
-  // Resolved directly rather than through `useAppDestinations`: this group's
-  // hrefs are static plugin paths and nothing here is availability-gated, so a
-  // plugin-only surface should not pull in the integration availability hooks.
+  // Resolved directly rather than through `useStaticDestinations`: this group's
+  // hrefs are static plugin paths, so it needs neither workspace context nor the
+  // availability subscription. Matches the desktop rail in `plugin-nav-items.tsx`.
   const destinations = resolveDestinations({
     surface: "mobileMenu",
     section: "plugins",

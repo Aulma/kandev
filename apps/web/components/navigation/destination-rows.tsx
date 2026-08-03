@@ -22,8 +22,9 @@ type DestinationRowsProps = {
 
 /**
  * Touch rows for a resolved destination list — the shared renderer behind every
- * mobile-menu navigation group. Data comes from `useAppDestinations`, so a
- * destination added to the manifest shows up here without touching this file.
+ * mobile-menu navigation group. Data comes from the navigation manifest (via
+ * `useAppDestinations` / `useStaticDestinations`), so a destination added to the
+ * manifest shows up here without touching this file.
  */
 export function DestinationRows({
   destinations,
