@@ -1,8 +1,7 @@
 "use client";
 
-import { Button } from "@kandev/ui/button";
-import Link from "@/components/routing/app-link";
-import { resolvePluginIcon } from "@/lib/plugins/icons";
+import { DestinationRows } from "@/components/navigation/destination-rows";
+import { NO_WORKSPACE_CONTEXT, resolveDestinations } from "@/lib/navigation/destinations";
 import { usePluginRegistry } from "@/lib/plugins/registry";
 
 type MobilePluginNavSectionProps = {
@@ -20,33 +19,26 @@ type MobilePluginNavSectionProps = {
  */
 export function MobilePluginNavSection({ onNavigate }: MobilePluginNavSectionProps) {
   const registry = usePluginRegistry();
-  const items = registry.getNavItems().filter((item) => (item.section ?? "main") === "main");
+  // Resolved directly rather than through `useAppDestinations`: this group's
+  // hrefs are static plugin paths and nothing here is availability-gated, so a
+  // plugin-only surface should not pull in the integration availability hooks.
+  const destinations = resolveDestinations({
+    surface: "mobileMenu",
+    section: "plugins",
+    ctx: NO_WORKSPACE_CONTEXT,
+    pluginItems: registry.getNavItems(),
+  });
 
-  if (items.length === 0) return null;
+  if (destinations.length === 0) return null;
 
   return (
     <div className="space-y-3" data-testid="mobile-plugin-nav-section">
       <div className="text-sm font-medium">Plugins</div>
-      {items.map((item) => {
-        const Icon = resolvePluginIcon(item.icon);
-        return (
-          <Button
-            key={item.id}
-            asChild
-            variant="outline"
-            className="h-11 w-full cursor-pointer justify-start gap-2"
-          >
-            <Link
-              href={item.path}
-              onClick={onNavigate}
-              data-testid={`mobile-plugin-nav-item-${item.id}`}
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              <span className="flex-1 truncate text-left">{item.label}</span>
-            </Link>
-          </Button>
-        );
-      })}
+      <DestinationRows
+        destinations={destinations}
+        onNavigate={onNavigate}
+        pluginTestIdPrefix="mobile-plugin-nav-item-"
+      />
     </div>
   );
 }

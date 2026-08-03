@@ -1,0 +1,44 @@
+import { describe, expect, it } from "vitest";
+import { getGitHubIntegrationStatus } from "./use-nav-availability";
+import type { GitHubStatus } from "@/lib/types/github";
+
+function status(overrides: Partial<GitHubStatus>): GitHubStatus {
+  return {
+    authenticated: false,
+    username: "",
+    auth_method: "none",
+    token_configured: false,
+    required_scopes: [],
+    ...overrides,
+  };
+}
+
+describe("getGitHubIntegrationStatus", () => {
+  it("shows checking while GitHub status is loading and not configured", () => {
+    expect(getGitHubIntegrationStatus(status({}), true)).toEqual({
+      ready: false,
+      label: "Checking",
+    });
+  });
+
+  it("treats a configured token as ready even before live auth is green", () => {
+    expect(getGitHubIntegrationStatus(status({ token_configured: true }), false)).toEqual({
+      ready: true,
+      label: "Configured",
+    });
+  });
+
+  it("uses the GitHub page for authenticated status", () => {
+    expect(getGitHubIntegrationStatus(status({ authenticated: true }), false)).toEqual({
+      ready: true,
+      label: "Connected",
+    });
+  });
+
+  it("shows setup only when no auth or token is configured", () => {
+    expect(getGitHubIntegrationStatus(status({}), false)).toEqual({
+      ready: false,
+      label: "Setup",
+    });
+  });
+});
