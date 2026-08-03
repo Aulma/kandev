@@ -146,6 +146,39 @@ func TestAppendSessionStateMessage_IncludesTaskEnvironmentID(t *testing.T) {
 	}
 }
 
+type fakeCancellationPendingProvider struct {
+	pending  bool
+	revision uint64
+}
+
+func (p fakeCancellationPendingProvider) CancellationPending(string) bool {
+	return p.pending
+}
+
+func (p fakeCancellationPendingProvider) CancellationPendingSnapshot(string) (bool, uint64) {
+	return p.pending, p.revision
+}
+
+func TestAppendSessionStateMessage_IncludesCancellationPending(t *testing.T) {
+	session := &models.TaskSession{ID: "sess-cancel", TaskID: "task-1"}
+	msgs := appendSessionStateMessageWithCancellation(
+		session.ID,
+		session,
+		fakeCancellationPendingProvider{pending: true, revision: 7},
+		nil,
+	)
+	if len(msgs) != 1 {
+		t.Fatalf("expected 1 message, got %d", len(msgs))
+	}
+	payload := decodePayload(t, msgs[0].Payload)
+	if got, ok := payload["cancellation_pending"]; !ok || got != true {
+		t.Fatalf("cancellation_pending = %#v, want explicit true", payload["cancellation_pending"])
+	}
+	if got, ok := payload["cancellation_revision"]; !ok || got != float64(7) {
+		t.Fatalf("cancellation_revision = %#v, want 7", payload["cancellation_revision"])
+	}
+}
+
 func TestAppendAgentctlStatusMessage_IncludesWorkspacePathForReload(t *testing.T) {
 	log, err := logger.NewLogger(logger.LoggingConfig{
 		Level:      "error",
