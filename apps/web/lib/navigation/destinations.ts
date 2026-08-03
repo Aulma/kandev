@@ -31,7 +31,17 @@ import { linkToTaskOverview, linkToTasks } from "@/lib/links";
 import { resolvePluginIcon } from "@/lib/plugins/icons";
 import type { NavItem } from "@/lib/plugins/types";
 
-/** Where a destination may be offered. A destination lists these explicitly. */
+/**
+ * Where a destination may be offered; every destination lists its surfaces
+ * explicitly rather than defaulting, so an omission is visible in review.
+ *
+ * - `sidebar` — desktop navigation chrome: the `AppSidebar` sections and footer,
+ *   plus the integration dropdown/topbar shortcuts that mirror them. All of it is
+ *   hidden below the `md` breakpoint.
+ * - `mobileMenu` — the phone/tablet hamburger sheet, which is the only navigation
+ *   surface below `md`.
+ * - `palette` — the command panel's Navigation group (keyboard-only today).
+ */
 export type NavSurface = "sidebar" | "mobileMenu" | "palette";
 
 /**
