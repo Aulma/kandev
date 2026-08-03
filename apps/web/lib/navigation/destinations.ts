@@ -96,7 +96,17 @@ export type PaletteOverride = {
   ignoreRequires?: boolean;
 };
 
-export type Destination = {
+/**
+ * Brand and product names are never translated (see apps/web/AGENTS.md), so
+ * integrations and plugin entries carry a literal `label` while first-party copy
+ * carries a catalog `labelKey`. Encoded as a union so "exactly one of the two"
+ * is a compile error rather than only a test failure.
+ */
+export type DestinationCopy =
+  | { label: string; labelKey?: never }
+  | { label?: never; labelKey: string };
+
+type DestinationBase = {
   /**
    * Stable identity, unique across the manifest and the merged plugin entries.
    * Plugin ids are namespaced (`plugin:<NavItem.id>`) so a plugin registering
@@ -105,13 +115,6 @@ export type Destination = {
   id: string;
   /** Raw `NavItem.id` for plugin entries; never set on first-party entries. */
   pluginItemId?: string;
-  /**
-   * Brand and product names are never translated (see apps/web/AGENTS.md), so
-   * integrations carry a literal `label`; first-party copy carries `labelKey`.
-   * Exactly one of the two is set.
-   */
-  label?: string;
-  labelKey?: string;
   icon: DestinationIcon;
   section: NavSection;
   href: DestinationHref;
@@ -122,6 +125,8 @@ export type Destination = {
   /** "plugin" entries get surface-specific test ids; see `pluginDestinations`. */
   source?: "plugin";
 };
+
+export type Destination = DestinationBase & DestinationCopy;
 
 export type ResolvedDestination = {
   id: string;

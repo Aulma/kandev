@@ -24,11 +24,19 @@ export function getGitHubIntegrationStatus(status: GitHubStatus | null, loading:
  * (`lib/navigation/destinations.ts`) — currently which integrations are
  * configured. Extend here when a destination gains a gate.
  *
- * Extracted from `useConfiguredIntegrationLinks` so the sidebar link list, the
- * mobile menu, and the command palette all gate on one implementation instead of
- * each calling the five domain hooks themselves. Every call is store-backed and
- * request-deduplicated by the domain hooks, so additional callers do not add
- * network traffic.
+ * Extracted from `useConfiguredIntegrationLinks` so the sidebar link list and the
+ * mobile menu gate on one implementation instead of each calling the five domain
+ * hooks themselves.
+ *
+ * Availability is **not** deduplicated across consumers. GitHub and GitLab are
+ * store-backed, but Jira, Linear and Azure DevOps go through
+ * `useIntegrationAuthed`, which owns a fetch plus a 90s `setInterval` per mounted
+ * consumer (`hooks/domains/integrations/use-integration-availability.ts`). So each
+ * mounted caller of this hook may add its own polling subscription: keep the
+ * callers to the surfaces that render gated sections, and use
+ * `useStaticDestinations` everywhere else. Deduplicating this properly means
+ * hoisting the probes into the store, which is a change to those domain hooks
+ * rather than to the navigation manifest.
  *
  * Not to be confused with `hooks/domains/integrations/use-integration-availability`,
  * which is the generic per-integration primitive these hooks are built on.
