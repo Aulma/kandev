@@ -99,9 +99,7 @@ export function IntegrationsSection({ collapsed }: IntegrationsSectionProps) {
           href={destination.href}
           label={destination.label}
           icon={destination.icon}
-          active={
-            pathname === destination.href || pathname.startsWith(`${destination.href}/`)
-          }
+          active={pathname === destination.href || pathname.startsWith(`${destination.href}/`)}
           {...(destination.source === "plugin"
             ? { testId: `plugin-nav-item-${destination.id}` }
             : {})}

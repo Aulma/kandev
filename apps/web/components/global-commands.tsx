@@ -182,7 +182,15 @@ export function GlobalCommands() {
       quickChatCommand,
       configChatCommand,
     ],
-    [navigationCommands, router.push, resolvedTheme, setTheme, quickChatCommand, configChatCommand, t],
+    [
+      navigationCommands,
+      router.push,
+      resolvedTheme,
+      setTheme,
+      quickChatCommand,
+      configChatCommand,
+      t,
+    ],
   );
 
   useRegisterCommands(commands);

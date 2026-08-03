@@ -35,14 +35,7 @@ describe("resolveDestinations", () => {
       availability: ALL_INTEGRATIONS,
     });
 
-    expect(ids(resolved)).toEqual([
-      "stats",
-      "azure-devops",
-      "github",
-      "gitlab",
-      "jira",
-      "linear",
-    ]);
+    expect(ids(resolved)).toEqual(["stats", "azure-devops", "github", "gitlab", "jira", "linear"]);
   });
 
   it("hides integrations that are not configured", () => {
@@ -214,7 +207,9 @@ describe("manifest invariants", () => {
 
   it("declares at least one surface per destination", () => {
     for (const destination of APP_DESTINATIONS) {
-      expect(destination.surfaces.length, `${destination.id} is offered nowhere`).toBeGreaterThan(0);
+      expect(destination.surfaces.length, `${destination.id} is offered nowhere`).toBeGreaterThan(
+        0,
+      );
     }
   });
 
