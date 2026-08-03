@@ -68,6 +68,7 @@ apps/backend/
 │   ├── integrations/     # Shared shapes for third-party integrations
 │   │   ├── healthpoll/   # Reusable 90s auth-health Poller (used by jira, linear)
 │   │   └── secretadapter/ # Upsert-style adapter over secrets.SecretStore
+│   ├── i18n/             # Localization for backend-rendered browser/share artifacts
 │   ├── jira/             # Jira/Atlassian Cloud integration (config, REST client, poller)
 │   ├── linear/           # Linear integration (config, GraphQL client, poller)
 │   ├── lsp/              # LSP server
@@ -270,13 +271,17 @@ You may still list the column in the `CREATE TABLE` so fresh DBs get it inline, 
 
 Built-in prompt content refreshes are seed-data migrations, not schema migrations. Match only known historical content hashes after applying the same normalization as the embedded prompt loader, require `created_at == updated_at` to preserve user edits, and use a conditional update over the original row values to avoid racing concurrent edits. Keep these refreshes with prompt seeding rather than `runMigrations()`.
 
+## Internationalization
+
+`internal/i18n` renders only browser-facing copy: SPA-unavailable pages and shared-task artifacts. Diagnostics, logs, agent/ACP output, and CLI output remain English.
+Use `i18n.T`/`i18n.Tf` with explicit locale threading (including interpolation/plurals); resolve artifact locale at creation. Catalogs are embedded in `internal/i18n/locales/`; regenerate `pseudo` with `pnpm run i18n:pseudo`.
+Prefer stable error codes for new output so the frontend translates it. See `docs/i18n.md` and ADR `2026-08-01-share-artifact-locale.md`.
+
 ## Code-quality limits
 
 Enforced by `apps/backend/.golangci.yml` (errors on new code only):
-- Functions: ≤80 lines, ≤50 statements
-- Cyclomatic complexity: ≤15 · Cognitive complexity: ≤30
-- Nesting depth: ≤5 · Naked returns only in functions ≤30 lines
-- No duplicated blocks (≥150 tokens) · Repeated strings → constants (≥3 occurrences)
+- Functions: ≤80 lines, ≤50 statements · Cyclomatic complexity: ≤15 · Cognitive complexity: ≤30
+- Nesting depth: ≤5 · Naked returns only in functions ≤30 lines · No duplicated blocks (≥150 tokens) · Repeated strings → constants (≥3 occurrences)
 
 When you hit a limit, extract a helper function. Prefer composition over growing a single function.
 
