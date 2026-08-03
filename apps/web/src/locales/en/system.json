@@ -383,7 +383,6 @@
   "updatesApplyConfirmDesktop": "Kandev will install {{version}} and restart the desktop app.",
   "updatesApplyConfirmService": "Kandev will update to {{version}}, reinstall the user service, and restart it.",
   "updatesApplyConfirmTitle": "Apply update?",
-  "updatesCheckFailed": "Update check failed",
   "updatesCheckNow": "Check now",
   "updatesCurrentVersion": "Current version",
   "updatesDownloading": "Downloading update ({{downloaded}} bytes)...",
