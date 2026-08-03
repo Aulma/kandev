@@ -3,6 +3,7 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@kandev/ui/select";
 import { Checkbox } from "@kandev/ui/checkbox";
 import { Label } from "@kandev/ui/label";
+import { useTranslation } from "react-i18next";
 import type {
   WorkflowStep,
   OnEnterAction,
@@ -318,12 +319,20 @@ export function TurnCompleteSelect({
         </div>
       )}
       {transitionType !== "none" && (
-        <ExplicitCompletionToggle
-          step={step}
-          savedStep={savedStep}
-          onUpdate={onUpdate}
-          readOnly={readOnly}
-        />
+        <>
+          <ExplicitCompletionToggle
+            step={step}
+            savedStep={savedStep}
+            onUpdate={onUpdate}
+            readOnly={readOnly}
+          />
+          <CancelCompletionToggle
+            step={step}
+            savedStep={savedStep}
+            onUpdate={onUpdate}
+            readOnly={readOnly}
+          />
+        </>
       )}
     </div>
   );
@@ -452,6 +461,7 @@ export function ExplicitCompletionToggle({
   onUpdate,
   readOnly,
 }: ExplicitCompletionToggleProps) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-2 pt-1" data-testid={`${step.id}-require-signal-row`}>
       <Checkbox
@@ -469,10 +479,54 @@ export function ExplicitCompletionToggle({
           (item) => item.auto_advance_requires_signal ?? false,
         )}
       />
-      <Label htmlFor={`${step.id}-require-signal`} className="text-sm">
-        Wait for agent completion signal
+      <Label
+        htmlFor={`${step.id}-require-signal`}
+        className="flex min-h-11 min-w-0 cursor-pointer items-center text-sm md:min-h-0"
+      >
+        {t("settings:waitForAgentCompletionSignal")}
       </Label>
       <HelpTip text="Only auto-advance once the agent calls step_complete_kandev. Otherwise turn-end is treated as completion." />
+    </div>
+  );
+}
+
+type CancelCompletionToggleProps = ExplicitCompletionToggleProps;
+
+export function CancelCompletionToggle({
+  step,
+  savedStep,
+  onUpdate,
+  readOnly,
+}: CancelCompletionToggleProps) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center gap-2 pt-1" data-testid={`${step.id}-cancel-completion-row`}>
+      <Checkbox
+        id={`${step.id}-cancel-completion`}
+        data-testid={`${step.id}-cancel-completion-checkbox`}
+        checked={step.cancel_triggers_turn_complete === true}
+        onCheckedChange={(checked) => {
+          if (readOnly) return;
+          onUpdate({ cancel_triggers_turn_complete: checked === true });
+        }}
+        disabled={readOnly}
+        data-settings-dirty={isWorkflowStepValueDirty(
+          step,
+          savedStep,
+          (item) => item.cancel_triggers_turn_complete ?? false,
+        )}
+      />
+      <Label
+        htmlFor={`${step.id}-cancel-completion`}
+        data-testid={`${step.id}-cancel-completion-label`}
+        className="flex min-h-11 min-w-0 cursor-pointer items-center text-sm md:min-h-0"
+      >
+        {t("settings:runCompletionActionsWhenTurnCancelled")}
+      </Label>
+      <HelpTip
+        testId={`${step.id}-cancel-completion-help`}
+        text={t("settings:runCompletionActionsWhenTurnCancelledHelp")}
+      />
     </div>
   );
 }
