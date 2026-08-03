@@ -15,6 +15,7 @@
   "justNow": "just now",
   "mAgo": "{{diffMin}}m ago",
   "plugins": "Plugins",
+  "prDetails": "PR Details",
   "prompts": "Prompts",
   "requestFailed": "Request failed",
   "reset": "Reset",
