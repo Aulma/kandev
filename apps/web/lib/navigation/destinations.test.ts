@@ -301,7 +301,9 @@ describe("navigation coverage guardrails", () => {
     // `useStaticDestinations` skips the availability subscription (which polls
     // per consumer). That is only safe while gates stay inside GATED_SECTIONS.
     const strays = APP_DESTINATIONS.filter(
-      (destination) => destination.requires && !GATED_SECTIONS.includes(destination.section),
+      (destination) =>
+        destination.requires &&
+        !GATED_SECTIONS.some((section) => section === destination.section),
     );
 
     expect(

@@ -1,5 +1,5 @@
 import { renderHook } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 
 const availabilitySpy = vi.hoisted(() => vi.fn(() => ({ github: true })));
 
@@ -30,6 +30,13 @@ describe("useStaticDestinations", () => {
   beforeEach(() => availabilitySpy.mockClear());
   afterEach(() => vi.clearAllMocks());
 
+  it("rejects availability-gated sections at compile time", () => {
+    type StaticSection = NonNullable<Parameters<typeof useStaticDestinations>[1]>;
+
+    expectTypeOf<"insights">().toMatchTypeOf<StaticSection>();
+    expectTypeOf<"integrations">().not.toMatchTypeOf<StaticSection>();
+  });
+
   /**
    * The regression this guards: every per-integration auth probe runs its own
    * 90s `setInterval` per consumer, so a surface that renders no gated
@@ -58,6 +65,13 @@ describe("useStaticDestinations", () => {
 describe("useAppDestinations", () => {
   beforeEach(() => availabilitySpy.mockClear());
   afterEach(() => vi.clearAllMocks());
+
+  it("only accepts availability-gated sections at compile time", () => {
+    type GatedSection = Parameters<typeof useAppDestinations>[1];
+
+    expectTypeOf<"integrations">().toMatchTypeOf<GatedSection>();
+    expectTypeOf<"insights">().not.toMatchTypeOf<GatedSection>();
+  });
 
   it("subscribes to availability so gated sections can be filtered", () => {
     const { result } = renderHook(() => useAppDestinations("sidebar", "integrations"));

@@ -6,10 +6,11 @@ import { useInOffice } from "@/hooks/use-in-office";
 import { useNavAvailability } from "@/hooks/use-nav-availability";
 import {
   resolveDestinations,
+  type GatedNavSection,
   type NavContext,
-  type NavSection,
   type NavSurface,
   type ResolvedDestination,
+  type StaticNavSection,
 } from "@/lib/navigation/destinations";
 import { usePluginRegistry } from "@/lib/plugins/registry";
 
@@ -35,7 +36,7 @@ export function useNavContext(): NavContext {
  */
 export function useAppDestinations(
   surface: NavSurface,
-  section?: NavSection | NavSection[],
+  section: GatedNavSection | GatedNavSection[],
 ): ResolvedDestination[] {
   const { t } = useTranslation();
   const ctx = useNavContext();
@@ -64,7 +65,7 @@ export function useAppDestinations(
  */
 export function useStaticDestinations(
   surface: NavSurface,
-  section?: NavSection | NavSection[],
+  section?: StaticNavSection | StaticNavSection[],
 ): ResolvedDestination[] {
   const { t } = useTranslation();
   const ctx = useNavContext();

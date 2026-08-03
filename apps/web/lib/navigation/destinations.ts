@@ -60,6 +60,18 @@ export type NavSurface = "sidebar" | "mobileMenu" | "palette";
  */
 export type NavSection = "primary" | "plugins" | "integrations" | "insights" | "utilities";
 
+/**
+ * Sections that may contain availability-gated destinations. Only surfaces
+ * rendering these sections need `useAppDestinations`; everything else can use
+ * `useStaticDestinations` and skip the integration availability subscription,
+ * which polls per consumer. `destinations.test.ts` enforces that no destination
+ * outside these sections declares `requires`.
+ */
+export const GATED_SECTIONS = ["integrations"] as const satisfies readonly NavSection[];
+
+export type GatedNavSection = (typeof GATED_SECTIONS)[number];
+export type StaticNavSection = Exclude<NavSection, GatedNavSection>;
+
 /** Keys the availability map may carry. Extend when a gated destination is added. */
 export type AvailabilityKey = "azure-devops" | "github" | "gitlab" | "jira" | "linear";
 
@@ -147,7 +159,7 @@ export const MOBILE_MENU_SECTIONS: NavSection[] = [
 ];
 
 /** Sections the mobile menu's utility group renders, in order. */
-export const MOBILE_MENU_UTILITY_SECTIONS: NavSection[] = ["insights", "utilities"];
+export const MOBILE_MENU_UTILITY_SECTIONS: StaticNavSection[] = ["insights", "utilities"];
 
 /**
  * Destinations deliberately not offered in the mobile menu, each with the mobile
@@ -169,15 +181,6 @@ export const PALETTE_NAVIGATION_GROUP_KEY = "common:commandGroupNavigation";
  * convention the app-status-bar ordering ids already use.
  */
 export const PLUGIN_ID_PREFIX = "plugin:";
-
-/**
- * Sections that may contain availability-gated destinations. Only surfaces
- * rendering these sections need `useAppDestinations`; everything else can use
- * `useStaticDestinations` and skip the integration availability subscription,
- * which polls per consumer. `destinations.test.ts` enforces that no destination
- * outside these sections declares `requires`.
- */
-export const GATED_SECTIONS: NavSection[] = ["integrations"];
 
 /**
  * First-party destinations, in the order surfaces should offer them.
