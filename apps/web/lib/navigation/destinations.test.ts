@@ -192,9 +192,16 @@ describe("plugin destinations", () => {
       section: "integrations",
       ctx: KANBAN,
       availability: { github: true },
-      // A plugin is free to register `id: "github"`; merged raw it would have
-      // produced two entries with the same key.
-      pluginItems: [{ id: "github", label: "GitHub Extras", path: "/plugins/github-extras" }],
+      // A plugin is free to register `id: "github"` in this very section; merged
+      // raw it would have produced two entries with the same key.
+      pluginItems: [
+        {
+          id: "github",
+          label: "GitHub Extras",
+          path: "/plugins/github-extras",
+          section: "integrations" as const,
+        },
+      ],
     });
 
     expect(ids(resolved)).toEqual(["github", "plugin:github"]);
