@@ -62,7 +62,18 @@ export function useAppDestinations(
  * these surfaces cost no background requests. `destinations.test.ts` enforces
  * the invariant that makes this safe: nothing outside `GATED_SECTIONS` declares
  * `requires`, and every palette entry is either ungated or opted out.
+ *
+ * Only the palette may omit `section` (first overload). Omitting it resolves
+ * every section, gated ones included, against an empty availability map — which
+ * is correct only because the palette's single gated entry opts out via
+ * `palette.ignoreRequires`. On any other surface that would silently drop every
+ * unconfigured integration, so the section is required there.
  */
+export function useStaticDestinations(surface: "palette"): ResolvedDestination[];
+export function useStaticDestinations(
+  surface: NavSurface,
+  section: StaticNavSection | StaticNavSection[],
+): ResolvedDestination[];
 export function useStaticDestinations(
   surface: NavSurface,
   section?: StaticNavSection | StaticNavSection[],

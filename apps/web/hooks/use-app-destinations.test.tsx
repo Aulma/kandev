@@ -33,8 +33,21 @@ describe("useStaticDestinations", () => {
   it("rejects availability-gated sections at compile time", () => {
     type StaticSection = NonNullable<Parameters<typeof useStaticDestinations>[1]>;
 
-    expectTypeOf<"insights">().toMatchTypeOf<StaticSection>();
-    expectTypeOf<"integrations">().not.toMatchTypeOf<StaticSection>();
+    expectTypeOf<"insights">().toExtend<StaticSection>();
+    expectTypeOf<"integrations">().not.toExtend<StaticSection>();
+  });
+
+  it("requires an explicit section on every surface but the palette", () => {
+    // Omitting the section resolves gated sections too, against an empty
+    // availability map — harmless for the palette (its gated entry opts out),
+    // but on any other surface it would silently drop unconfigured integrations.
+    expectTypeOf(useStaticDestinations).toBeCallableWith("palette");
+    const offPalette = () => {
+      // @ts-expect-error - a non-palette surface must name its sections
+      useStaticDestinations("sidebar");
+    };
+
+    expect(offPalette).toBeTypeOf("function");
   });
 
   /**
@@ -69,8 +82,8 @@ describe("useAppDestinations", () => {
   it("only accepts availability-gated sections at compile time", () => {
     type GatedSection = Parameters<typeof useAppDestinations>[1];
 
-    expectTypeOf<"integrations">().toMatchTypeOf<GatedSection>();
-    expectTypeOf<"insights">().not.toMatchTypeOf<GatedSection>();
+    expectTypeOf<"integrations">().toExtend<GatedSection>();
+    expectTypeOf<"insights">().not.toExtend<GatedSection>();
   });
 
   it("subscribes to availability so gated sections can be filtered", () => {
