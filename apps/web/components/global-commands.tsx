@@ -14,7 +14,7 @@ import {
   IconMessageCircle,
   IconSparkles,
 } from "@tabler/icons-react";
-import { useAppDestinations } from "@/hooks/use-app-destinations";
+import { useStaticDestinations } from "@/hooks/use-app-destinations";
 import { PALETTE_NAVIGATION_GROUP_KEY } from "@/lib/navigation/destinations";
 import { useRegisterCommands } from "@/hooks/use-register-commands";
 import { useKeyboardShortcut } from "@/hooks/use-keyboard-shortcut";
@@ -47,13 +47,19 @@ function searchKeywords(t: TFunction, key: string): string[] {
 }
 
 /**
- * Navigation commands come from the navigation manifest
- * (`lib/navigation/destinations.ts`), so the palette, the sidebar, and the mobile
- * menu offer the same destinations. Command ids and copy live in each
- * destination's `palette` block — they are stable API for tests and telemetry.
+ * The Navigation group comes from the navigation manifest
+ * (`lib/navigation/destinations.ts`), so a destination cannot reach the palette
+ * without also being offered on the surfaces it declares. Command ids and copy
+ * live in each destination's `palette` block — they are stable API for tests and
+ * telemetry. The Settings group below stays hand-written: those are deep links
+ * into one destination, not destinations of their own.
  */
 function useNavigationCommands(push: PushFn, t: TFunction): CommandItem[] {
-  const destinations = useAppDestinations("palette");
+  // `useStaticDestinations`, not `useAppDestinations`: this component is mounted
+  // for the whole session, and the palette's one gated entry (GitHub) opts out of
+  // the availability check, so subscribing to integration polling here would add
+  // background requests for nothing.
+  const destinations = useStaticDestinations("palette");
   // Cached on a value signature so the command array keeps its identity across
   // unrelated re-renders — `useRegisterCommands` re-registers whenever the array
   // changes. Same render-time cache pattern as `use-responsive-breakpoint.ts`;

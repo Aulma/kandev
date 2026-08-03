@@ -26,7 +26,10 @@ test.describe("Stats on mobile", () => {
 
     await expect(testPage).toHaveURL(/\/stats$/);
     await expect(sheet).toBeHidden();
-    await expect(testPage.getByText("Statistics", { exact: true })).toBeVisible({
+    // Assert content unique to the rendered stats page. The "Statistics" topbar
+    // title also renders for the no-workspace and error states, so it would pass
+    // on a page that never loaded.
+    await expect(testPage.getByRole("button", { name: "Copy Stats" })).toBeVisible({
       timeout: 15_000,
     });
   });

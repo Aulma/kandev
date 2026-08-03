@@ -101,7 +101,7 @@ export function IntegrationsSection({ collapsed }: IntegrationsSectionProps) {
           icon={destination.icon}
           active={pathname === destination.href || pathname.startsWith(`${destination.href}/`)}
           {...(destination.source === "plugin"
-            ? { testId: `plugin-nav-item-${destination.id}` }
+            ? { testId: `plugin-nav-item-${destination.pluginItemId ?? destination.id}` }
             : {})}
         />
       ))}

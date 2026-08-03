@@ -60,9 +60,11 @@ export function DestinationRow({
   className,
 }: DestinationRowProps) {
   const Icon = destination.icon;
+  // Built from the raw `NavItem.id`, not the namespaced destination id — the
+  // `plugin-nav-item-<id>` / `mobile-plugin-nav-item-<id>` ids are public contract.
   const testId =
     destination.source === "plugin" && pluginTestIdPrefix
-      ? `${pluginTestIdPrefix}${destination.id}`
+      ? `${pluginTestIdPrefix}${destination.pluginItemId ?? destination.id}`
       : undefined;
 
   return (

@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   APP_DESTINATIONS,
+  GATED_SECTIONS,
+  MOBILE_MENU_EXEMPTIONS,
   MOBILE_MENU_SECTIONS,
   MOBILE_MENU_UTILITY_SECTIONS,
   NO_WORKSPACE_CONTEXT,
@@ -156,8 +158,19 @@ describe("plugin destinations", () => {
       pluginItems,
     });
 
-    expect(ids(resolved)).toEqual(["hello", "explicit-main"]);
+    expect(ids(resolved)).toEqual(["plugin:hello", "plugin:explicit-main"]);
     expect(resolved.every((destination) => destination.source === "plugin")).toBe(true);
+  });
+
+  it("keeps the raw item id available for test ids", () => {
+    const [hello] = resolveDestinations({
+      surface: "mobileMenu",
+      section: "plugins",
+      ctx: NO_WORKSPACE_CONTEXT,
+      pluginItems,
+    });
+
+    expect(hello).toMatchObject({ id: "plugin:hello", pluginItemId: "hello" });
   });
 
   it("routes integration-section items alongside the first-party integrations", () => {
@@ -170,7 +183,23 @@ describe("plugin destinations", () => {
     });
 
     // First-party links keep precedence; plugin items follow.
-    expect(ids(resolved)).toEqual(["github", "tracker"]);
+    expect(ids(resolved)).toEqual(["github", "plugin:tracker"]);
+  });
+
+  it("namespaces plugin ids so a plugin cannot collide with a first-party id", () => {
+    const resolved = resolveDestinations({
+      surface: "sidebar",
+      section: "integrations",
+      ctx: KANBAN,
+      availability: { github: true },
+      // A plugin is free to register `id: "github"`; merged raw it would have
+      // produced two entries with the same key.
+      pluginItems: [{ id: "github", label: "GitHub Extras", path: "/plugins/github-extras" }],
+    });
+
+    expect(ids(resolved)).toEqual(["github", "plugin:github"]);
+    expect(new Set(ids(resolved)).size).toBe(resolved.length);
+    expect(resolved[1]).toMatchObject({ pluginItemId: "github", label: "GitHub Extras" });
   });
 
   it("never renders settings-section items as destinations", () => {
@@ -181,13 +210,13 @@ describe("plugin destinations", () => {
       pluginItems,
     });
 
-    expect(ids(resolved)).not.toContain("prefs");
+    expect(ids(resolved)).not.toContain("plugin:prefs");
   });
 
   it("keeps plugin items off the palette, which plugins reach via shortcuts", () => {
     const resolved = resolveDestinations({ surface: "palette", ctx: KANBAN, pluginItems });
 
-    expect(ids(resolved)).not.toContain("hello");
+    expect(ids(resolved)).not.toContain("plugin:hello");
   });
 });
 
@@ -232,20 +261,60 @@ describe("manifest invariants", () => {
  * shipping with no navigation entry at all.
  */
 describe("navigation coverage guardrails", () => {
-  /** Offered on desktop but deliberately not in the mobile menu. Keep empty. */
-  const SIDEBAR_ONLY_BY_DESIGN: string[] = [];
-
-  it("offers every desktop destination in the mobile menu too", () => {
-    const sidebarOnly = APP_DESTINATIONS.filter(
+  it("offers every destination in the mobile menu unless it is explicitly exempt", () => {
+    // Deliberately stricter than "sidebar destinations must also be mobile":
+    // a palette-only destination is just as unreachable on a phone, so every
+    // omission has to be justified in MOBILE_MENU_EXEMPTIONS.
+    const missing = APP_DESTINATIONS.filter(
       (destination) =>
-        destination.surfaces.includes("sidebar") &&
-        !destination.surfaces.includes("mobileMenu") &&
-        !SIDEBAR_ONLY_BY_DESIGN.includes(destination.id),
+        !destination.surfaces.includes("mobileMenu") && !(destination.id in MOBILE_MENU_EXEMPTIONS),
     );
 
     expect(
-      ids(sidebarOnly),
-      "a destination offered on the desktop sidebar must also be offered in the mobile menu — the sidebar is hidden below md, so sidebar-only means unreachable on a phone",
+      ids(missing),
+      "the sidebar is hidden below md, so a destination that is not in the mobile menu is unreachable on a phone — add the mobileMenu surface, or record the mobile affordance that owns it in MOBILE_MENU_EXEMPTIONS",
+    ).toEqual([]);
+  });
+
+  it("keeps the exemption list honest", () => {
+    for (const [id, reason] of Object.entries(MOBILE_MENU_EXEMPTIONS)) {
+      const destination = APP_DESTINATIONS.find((entry) => entry.id === id);
+      expect(destination, `${id} is exempt but is not a destination`).toBeTruthy();
+      expect(
+        destination?.surfaces.includes("mobileMenu"),
+        `${id} is offered in the mobile menu, so it should not be exempt`,
+      ).toBe(false);
+      expect(reason.length, `${id} needs a reason naming the surface that owns it`).toBeGreaterThan(
+        10,
+      );
+    }
+  });
+
+  it("confines availability gates to the sections that resolve availability", () => {
+    // `useStaticDestinations` skips the availability subscription (which polls
+    // per consumer). That is only safe while gates stay inside GATED_SECTIONS.
+    const strays = APP_DESTINATIONS.filter(
+      (destination) => destination.requires && !GATED_SECTIONS.includes(destination.section),
+    );
+
+    expect(
+      ids(strays),
+      `a gated destination outside ${GATED_SECTIONS.join(", ")} would silently disappear on surfaces that use useStaticDestinations`,
+    ).toEqual([]);
+  });
+
+  it("keeps every palette destination resolvable without availability", () => {
+    // The palette resolves statically, so a gated entry must opt out explicitly.
+    const unresolvable = APP_DESTINATIONS.filter(
+      (destination) =>
+        destination.surfaces.includes("palette") &&
+        destination.requires &&
+        !destination.palette?.ignoreRequires,
+    );
+
+    expect(
+      ids(unresolvable),
+      "a gated palette entry needs palette.ignoreRequires, or the palette must switch to useAppDestinations",
     ).toEqual([]);
   });
 

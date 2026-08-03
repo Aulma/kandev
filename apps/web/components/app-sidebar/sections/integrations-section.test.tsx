@@ -56,15 +56,24 @@ function destination(
   id: string,
   label: string,
   icon: ResolvedDestination["icon"],
-  source?: "plugin",
+): ResolvedDestination {
+  return { id, label, icon, section: "integrations", href: `/${id}` };
+}
+
+/** Plugin entries arrive namespaced, with the raw item id kept for test ids. */
+function pluginDestination(
+  itemId: string,
+  label: string,
+  icon: ResolvedDestination["icon"],
 ): ResolvedDestination {
   return {
-    id,
+    id: `plugin:${itemId}`,
+    pluginItemId: itemId,
     label,
     icon,
     section: "integrations",
-    href: `/${id}`,
-    ...(source ? { source } : {}),
+    href: `/${itemId}`,
+    source: "plugin",
   };
 }
 
@@ -73,8 +82,8 @@ const GITHUB = destination("github", "GitHub", IconBrandGithub);
 const GITLAB = destination("gitlab", "GitLab", IconBrandGitlab);
 const JIRA = destination("jira", "Jira", IconHexagon);
 const LINEAR = destination("linear", "Linear", IconHexagon);
-const PLUGIN_PAGE = destination("cost-per-model", "Cost per Model", IconChartBar, "plugin");
-const PLUGIN_TEST_ID = `plugin-nav-item-${PLUGIN_PAGE.id}`;
+const PLUGIN_PAGE = pluginDestination("cost-per-model", "Cost per Model", IconChartBar);
+const PLUGIN_TEST_ID = `plugin-nav-item-${PLUGIN_PAGE.pluginItemId}`;
 
 function renderSection() {
   return render(

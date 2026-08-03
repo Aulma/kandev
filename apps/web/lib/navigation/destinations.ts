@@ -1,18 +1,27 @@
 /**
- * The app's navigation manifest: one declaration per top-level destination,
- * consumed by every surface that offers navigation (sidebar, mobile menu,
- * command palette).
+ * The app's navigation manifest: one declaration per top-level destination.
  *
- * Why this exists: before it, each surface hardcoded its own list. Adding a
+ * Why this exists: each surface used to hardcode its own list. Adding a
  * destination meant editing three unrelated files, and forgetting one silently
- * dropped the destination from that surface — `/stats` was reachable only from
- * the desktop-only sidebar footer and a keyboard-only palette command, so it had
- * no phone entry point at all. `destinations.test.ts` now fails when a
- * first-class route has no manifest entry, or when a destination is offered on
- * the sidebar but not in the mobile menu.
+ * dropped it from that surface — `/stats` was reachable only from the
+ * desktop-only sidebar footer and a keyboard-only palette command, so it had no
+ * phone entry point at all. `destinations.test.ts` now fails when a first-class
+ * route has no manifest entry, or when a destination is missing from the mobile
+ * menu without a recorded reason.
+ *
+ * What this manifest currently drives: the sidebar's integrations section and
+ * footer insight buttons, the sidebar and mobile plugin nav groups, the mobile
+ * menu's integrations and utility groups, and the command palette's Navigation
+ * group.
+ *
+ * What it does not drive yet (deliberately, see the notes on `APP_DESTINATIONS`):
+ * the sidebar's primary nav and the mobile header/View-toggle affordances for
+ * Home and Tasks, action-shaped controls (New task, Inbox, quick chat, the
+ * settings gear, the Office↔Kanban switch), the settings tree, and Office's own
+ * navigation section. Those stay bespoke until the shared-shell work lands.
  *
  * This module is deliberately pure — no React, no hooks, no `t()`. Availability
- * (integration configured? feature enabled?) and copy resolution are injected by
+ * (integration configured?) and copy resolution are injected by
  * `hooks/use-app-destinations.ts`, which keeps the manifest unit-testable.
  */
 import type { ComponentType } from "react";
@@ -76,7 +85,14 @@ export type PaletteOverride = {
 };
 
 export type Destination = {
+  /**
+   * Stable identity, unique across the manifest and the merged plugin entries.
+   * Plugin ids are namespaced (`plugin:<NavItem.id>`) so a plugin registering
+   * `id: "github"` cannot collide with the first-party GitHub destination.
+   */
   id: string;
+  /** Raw `NavItem.id` for plugin entries; never set on first-party entries. */
+  pluginItemId?: string;
   /**
    * Brand and product names are never translated (see apps/web/AGENTS.md), so
    * integrations carry a literal `label`; first-party copy carries `labelKey`.
@@ -102,6 +118,8 @@ export type ResolvedDestination = {
   section: NavSection;
   href: string;
   source?: "plugin";
+  /** Raw `NavItem.id` for plugin entries — the id e2e test ids are built from. */
+  pluginItemId?: string;
   palette?: PaletteOverride;
 };
 
@@ -131,8 +149,35 @@ export const MOBILE_MENU_SECTIONS: NavSection[] = [
 /** Sections the mobile menu's utility group renders, in order. */
 export const MOBILE_MENU_UTILITY_SECTIONS: NavSection[] = ["insights", "utilities"];
 
+/**
+ * Destinations deliberately not offered in the mobile menu, each with the mobile
+ * affordance that owns it instead. Everything else must be offered there: the
+ * sidebar is hidden below `md`, so an omission means unreachable on a phone —
+ * which is exactly how `/stats` ended up with no phone entry point.
+ * `destinations.test.ts` fails on any omission that is not listed here.
+ */
+export const MOBILE_MENU_EXEMPTIONS: Record<string, string> = {
+  home: "the mobile header's brand link is the phone's home affordance",
+  tasks: "the mobile menu's View toggle switches between Kanban and List",
+};
+
 /** Catalog key the palette groups navigation commands under. */
 export const PALETTE_NAVIGATION_GROUP_KEY = "common:commandGroupNavigation";
+
+/**
+ * Id namespace for plugin-registered entries. Matches the `plugin:<id>:…`
+ * convention the app-status-bar ordering ids already use.
+ */
+export const PLUGIN_ID_PREFIX = "plugin:";
+
+/**
+ * Sections that may contain availability-gated destinations. Only surfaces
+ * rendering these sections need `useAppDestinations`; everything else can use
+ * `useStaticDestinations` and skip the integration availability subscription,
+ * which polls per consumer. `destinations.test.ts` enforces that no destination
+ * outside these sections declares `requires`.
+ */
+export const GATED_SECTIONS: NavSection[] = ["integrations"];
 
 /**
  * First-party destinations, in the order surfaces should offer them.
@@ -295,7 +340,11 @@ export function pluginDestinations(items: NavItem[]): Destination[] {
   return items
     .filter((item) => (item.section ?? "main") !== "settings")
     .map((item) => ({
-      id: item.id,
+      // Namespaced: plugin ids come from third-party manifests and share the id
+      // space with first-party destinations once merged. The raw id stays on
+      // `pluginItemId` because `plugin-nav-item-<id>` test ids are public contract.
+      id: `${PLUGIN_ID_PREFIX}${item.id}`,
+      pluginItemId: item.id,
       label: item.label,
       icon: resolvePluginIcon(item.icon),
       section: item.section === "integrations" ? ("integrations" as const) : ("plugins" as const),
@@ -364,6 +413,7 @@ function toResolved(
     section: destination.section,
     href,
     ...(destination.source ? { source: destination.source } : {}),
+    ...(destination.pluginItemId ? { pluginItemId: destination.pluginItemId } : {}),
     ...(destination.palette ? { palette: destination.palette } : {}),
   };
 }

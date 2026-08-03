@@ -11,7 +11,7 @@ import {
   IconStethoscope,
   IconWifiOff,
 } from "@tabler/icons-react";
-import { useAppDestinations } from "@/hooks/use-app-destinations";
+import { useStaticDestinations } from "@/hooks/use-app-destinations";
 import type { DestinationIcon } from "@/lib/navigation/destinations";
 import { Button } from "@kandev/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@kandev/ui/tooltip";
@@ -213,7 +213,7 @@ export function AppSidebarFooter({ collapsed, onToggleSettingsMode }: AppSidebar
   // Stats today, and anything else the manifest adds to the insights section.
   // The gear below stays bespoke: it toggles the sidebar's settings takeover as
   // well as navigating, so it is an action, not a plain destination.
-  const insightDestinations = useAppDestinations("sidebar", "insights");
+  const insightDestinations = useStaticDestinations("sidebar", "insights");
   const releaseNotes = useReleaseNotes();
   const [improveOpen, setImproveOpen] = useState(false);
   const authMode = useAppStore((s) => s.auth.mode);

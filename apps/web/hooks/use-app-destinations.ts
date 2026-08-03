@@ -21,12 +21,14 @@ export function useNavContext(): NavContext {
 }
 
 /**
- * The destinations a surface should offer, resolved against the active workspace,
- * integration availability, and the plugin registry.
+ * Destinations for a surface that renders availability-gated sections — today
+ * that means the integrations groups (see `GATED_SECTIONS`).
  *
- * Every navigation surface calls this instead of hardcoding its own list — that
- * is what keeps the sidebar, the mobile menu, and the command palette from
- * drifting apart (see `lib/navigation/destinations.ts`).
+ * Subscribes to `useNavAvailability`, and therefore to the per-integration auth
+ * probes, which each run their own 90s `setInterval` per consumer
+ * (`hooks/domains/integrations/use-integration-availability.ts`). Use
+ * `useStaticDestinations` for ungated sections so a nav surface doesn't add
+ * background polling just to render a static link.
  *
  * Not memoized: the availability map is rebuilt each render, so a `useMemo` here
  * would never hit. Consumers map the result straight into JSX.
@@ -45,6 +47,33 @@ export function useAppDestinations(
     ...(section ? { section } : {}),
     ctx,
     availability,
+    translate: t,
+    pluginItems: registry.getNavItems(),
+  });
+}
+
+/**
+ * Destinations for a surface whose sections carry no availability gate — the
+ * sidebar footer, the mobile menu's utility group, and the command palette
+ * (whose one gated entry opts out via `palette.ignoreRequires`).
+ *
+ * Identical to `useAppDestinations` minus the availability subscription, so
+ * these surfaces cost no background requests. `destinations.test.ts` enforces
+ * the invariant that makes this safe: nothing outside `GATED_SECTIONS` declares
+ * `requires`, and every palette entry is either ungated or opted out.
+ */
+export function useStaticDestinations(
+  surface: NavSurface,
+  section?: NavSection | NavSection[],
+): ResolvedDestination[] {
+  const { t } = useTranslation();
+  const ctx = useNavContext();
+  const registry = usePluginRegistry();
+
+  return resolveDestinations({
+    surface,
+    ...(section ? { section } : {}),
+    ctx,
     translate: t,
     pluginItems: registry.getNavItems(),
   });

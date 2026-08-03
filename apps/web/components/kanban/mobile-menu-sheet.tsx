@@ -19,7 +19,7 @@ import { AppSidebarWorkspacePicker } from "@/components/app-sidebar/app-sidebar-
 import { MobileIntegrationsSection } from "@/components/integrations/integrations-menu";
 import { DestinationRows } from "@/components/navigation/destination-rows";
 import { MobilePluginNavSection } from "@/components/plugins/mobile-plugin-nav-section";
-import { useAppDestinations } from "@/hooks/use-app-destinations";
+import { useStaticDestinations } from "@/hooks/use-app-destinations";
 import { MOBILE_MENU_UTILITY_SECTIONS } from "@/lib/navigation/destinations";
 import { TaskSearchInput } from "./task-search-input";
 import {
@@ -297,7 +297,7 @@ function MobileUtilityActions({
   // Stats, Settings, and anything else added to the manifest's insight/utility
   // sections. Before the manifest, this block hardcoded a Settings link and
   // Stats had no phone entry point at all.
-  const destinations = useAppDestinations("mobileMenu", MOBILE_MENU_UTILITY_SECTIONS);
+  const destinations = useStaticDestinations("mobileMenu", MOBILE_MENU_UTILITY_SECTIONS);
   const closeSheet = () => onOpenChange(false);
   const openHealth = () => {
     closeSheet();
