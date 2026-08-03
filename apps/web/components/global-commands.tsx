@@ -64,21 +64,45 @@ function useNavigationCommands(push: PushFn, t: TFunction): CommandItem[] {
   // unrelated re-renders — `useRegisterCommands` re-registers whenever the array
   // changes. Same render-time cache pattern as `use-responsive-breakpoint.ts`;
   // a `useMemo` cannot work here because the resolved list is rebuilt each render.
-  const signature = destinations.map((d) => `${d.id}|${d.href}|${d.label}`).join("");
-  const cacheRef = useRef<{ signature: string; commands: CommandItem[] } | null>(null);
+  const group = t(GROUP_NAVIGATION);
+  const resolved = destinations.map((destination) => ({
+    destination,
+    keywords: destination.palette?.keywordsKey
+      ? searchKeywords(t, destination.palette.keywordsKey)
+      : [],
+  }));
+  const signature = JSON.stringify(
+    resolved.map(({ destination, keywords }) => [
+      destination.id,
+      destination.palette?.id,
+      destination.href,
+      destination.label,
+      group,
+      keywords,
+    ]),
+  );
+  const cacheRef = useRef<{
+    signature: string;
+    push: PushFn;
+    commands: CommandItem[];
+  } | null>(null);
 
-  if (!cacheRef.current || cacheRef.current.signature !== signature) {
+  if (
+    !cacheRef.current ||
+    cacheRef.current.signature !== signature ||
+    cacheRef.current.push !== push
+  ) {
     cacheRef.current = {
       signature,
-      commands: destinations.map((destination) => {
+      push,
+      commands: resolved.map(({ destination, keywords }) => {
         const Icon = destination.icon;
-        const keywordsKey = destination.palette?.keywordsKey;
         return {
           id: destination.palette?.id ?? `nav-${destination.id}`,
           label: destination.label,
-          group: t(GROUP_NAVIGATION),
+          group,
           icon: <Icon className="size-3.5" />,
-          keywords: keywordsKey ? searchKeywords(t, keywordsKey) : [],
+          keywords,
           action: () => push(destination.href),
         };
       }),
