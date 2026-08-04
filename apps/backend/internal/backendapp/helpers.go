@@ -544,6 +544,7 @@ type routeParams struct {
 	httpPort                      int
 	features                      config.FeaturesConfig
 	voice                         config.VoiceConfig
+	homeDir                       string
 	interimSettingsInterlockToken string
 	log                           *logger.Logger
 }
@@ -963,6 +964,11 @@ func resolveRepositoryIDForSessionSubpath(ctx context.Context, taskRepo *sqliter
 
 // registerTaskRoutes registers all task-related HTTP and WebSocket routes.
 func registerTaskRoutes(p routeParams, planService *taskservice.PlanService, handoffSvc *taskservice.HandoffService) {
+	if attachmentSvc := p.taskSvc.AttachmentService(); attachmentSvc != nil {
+		taskhandlers.RegisterAttachmentRoutes(p.router, attachmentSvc, p.log)
+	} else {
+		p.log.Warn("prompt attachment routes disabled: attachment service is unavailable")
+	}
 	taskhandlers.RegisterWorkspaceRoutes(p.router, p.gateway.Dispatcher, p.taskSvc, p.log)
 	if p.services != nil {
 		registerMentionRoutes(p.router, p.services.Mentions)
