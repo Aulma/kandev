@@ -125,8 +125,10 @@ test.describe("compact desktop responsive layout", () => {
     await testPage.setViewportSize({ width: 1600, height: 800 });
     await expect(testPage.getByTestId("desktop-kanban-stage-navigator")).toHaveCount(0);
 
+    // Below the 768px sidebar boundary the board uses mobile composition; the
+    // tablet layout is a coarse-pointer fallback and is not reachable here.
     await testPage.setViewportSize({ width: 700, height: 800 });
-    await expect(testPage.getByTestId("tablet-kanban-layout")).toBeVisible();
+    await expect(testPage.getByTestId("mobile-kanban-layout")).toBeVisible();
     await expect(testPage.getByTestId("desktop-kanban-stage-navigator")).toHaveCount(0);
   });
 });

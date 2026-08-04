@@ -4,10 +4,15 @@ import type { SeedData } from "../../fixtures/test-base";
 import type { ApiClient } from "../../helpers/api-client";
 import { SessionPage } from "../../pages/session-page";
 
-// The responsive breakpoint logic treats width < 768 with fine pointer as
-// "tablet"; width >= 768 with fine pointer is compactDesktop. Headless
-// Chromium reports fine pointer, so a true tablet layout needs width < 768.
-const TABLET_VIEWPORT = { width: 700, height: 900 };
+// The tablet layout is now a coarse-pointer fallback: `useResponsiveBreakpoint`
+// reports "tablet" only for widths between the 768px sidebar boundary and the
+// 1024px desktop boundary when the primary pointer is coarse. Headless Chromium
+// reports a fine pointer, and the `testPage` fixture builds its context with
+// only a baseURL, so a spec cannot opt into touch emulation today. Skipped
+// rather than deleted: the assertions below are still the contract for tablet
+// pane persistence, and they become runnable as soon as the fixture can create
+// a coarse-pointer context.
+const TABLET_VIEWPORT = { width: 800, height: 900 };
 
 async function openTabletTask(
   page: Page,
@@ -41,7 +46,7 @@ async function readStoredLayout(page: Page, id: string): Promise<Record<string, 
   }, id);
 }
 
-test.describe("Tablet pane persistence", () => {
+test.describe.skip("Tablet pane persistence", () => {
   test("tablet left/right split persists across reload", async ({
     testPage,
     apiClient,
