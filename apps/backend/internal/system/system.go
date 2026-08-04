@@ -30,6 +30,7 @@ import (
 	"github.com/kandev/kandev/internal/system/jobs"
 	"github.com/kandev/kandev/internal/system/logbundle"
 	"github.com/kandev/kandev/internal/system/metrics"
+	"github.com/kandev/kandev/internal/system/queuesettings"
 	"github.com/kandev/kandev/internal/system/restart"
 	systemsettings "github.com/kandev/kandev/internal/system/settings"
 	"github.com/kandev/kandev/internal/system/storage"
@@ -54,6 +55,7 @@ type BuildInfo struct {
 // no in-process re-exec is performed.
 type Wiring struct {
 	OrchestratorShutdown func()
+	MessageQueue         queuesettings.Target
 }
 
 // Service exposes the composed system sub-services. Each field is
@@ -68,6 +70,7 @@ type Service struct {
 	LogBundles     *logbundle.Service
 	FrontendErrors *frontenderrors.Service
 	Metrics        *metrics.Service
+	MessageQueue   *queuesettings.Service
 	Updates        *updates.Service
 	Restart        restart.Manager
 	Storage        *storage.Handler
@@ -101,10 +104,16 @@ func Provide(cfg *config.Config, log *logger.Logger, pool *db.Pool, eventBus bus
 		log.Error("Failed to initialize system settings store", zap.Error(err))
 	}
 	var metricsSvc *metrics.Service
+	var queueSettingsSvc *queuesettings.Service
 	updatesOpts := []updates.Option{updates.WithHomeDir(homeDir), updates.WithJobs(tracker)}
 	if settingsStore != nil {
 		metricsStore := metrics.NewStore(settingsStore)
 		metricsSvc = metrics.NewService(metricsStore, metrics.NewCollector())
+		if wiring.MessageQueue != nil {
+			queueSettingsSvc = queuesettings.NewService(
+				queuesettings.NewStore(settingsStore), wiring.MessageQueue, nil, log,
+			)
+		}
 		updatesOpts = append(updatesOpts, updates.WithSettingsStore(settingsStore))
 	}
 
@@ -125,6 +134,7 @@ func Provide(cfg *config.Config, log *logger.Logger, pool *db.Pool, eventBus bus
 		}),
 		FrontendErrors: frontenderrors.New(log, nil),
 		Metrics:        metricsSvc,
+		MessageQueue:   queueSettingsSvc,
 		Updates:        updatesSvc,
 		Restart:        restart.NewManagerFromEnv(),
 	}
@@ -172,6 +182,9 @@ func (s *Service) RegisterRoutes(router *gin.Engine, log *logger.Logger) {
 
 	if s.Metrics != nil {
 		metrics.RegisterRoutes(g, s.Metrics)
+	}
+	if s.MessageQueue != nil {
+		queuesettings.RegisterRoutes(g, admin, s.MessageQueue)
 	}
 
 	g.GET("/updates", updates.HandleGet(s.Updates))

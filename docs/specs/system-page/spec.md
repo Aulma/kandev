@@ -109,6 +109,8 @@ GET    /api/v1/system/updates                     - { current, latest, latest_ur
 POST   /api/v1/system/updates/check               - force selected-source re-poll; rate-limited 30s
 PATCH  /api/v1/system/updates/channel             - persist Stable/Nightly for a verified managed npm/npx user service; body { channel }
 POST   /api/v1/system/updates/apply               - queue service-only self-update; body { confirm: "UPDATE", target_version }
+GET    /api/v1/system/message-queue/settings       - configured/effective queue limit and source
+PATCH  /api/v1/system/message-queue/settings       - save and live-apply admin queue limit
 ```
 
 The System API has no global casing convention. Updates and Info use the snake_case JSON fields
@@ -198,6 +200,10 @@ The page reads the JSON statically; no backend endpoint is needed.
 - **GIVEN** the user clicks **Check now** twice within 30 seconds, **WHEN** the second click fires, **THEN** the endpoint returns `429 Too Many Requests` and the UI shows "Already checked, try again in <N>s".
 - **GIVEN** retained backend logs and a connected browser with local console history, **WHEN** the user downloads diagnostics from `/settings/system/logs`, **THEN** one ZIP contains separate backend/frontend directories and a manifest describing both captures.
 - **GIVEN** the user opens `/settings/system/licenses` while offline, **WHEN** the page renders, **THEN** every dependency's license text is available locally (no network calls).
+- **GIVEN** no queue-limit environment variable is set, **WHEN** an admin saves
+  a new limit on `/settings/general/message-queue`, **THEN** later queue
+  admissions use it immediately without deleting existing messages or
+  requiring a restart.
 
 ## Data model
 
@@ -226,6 +232,7 @@ guard covers database vacuum/optimize/reset, manual update checks, update-channe
 update apply. Backup create/restore/delete and disk-usage
 refresh currently remain on the base authenticated group. Reset and restore additionally validate
 their confirmation bodies server-side as defence in depth.
+The Message Queue settings GET is readable by members, while its PATCH is admin-only.
 
 ## Failure modes
 
