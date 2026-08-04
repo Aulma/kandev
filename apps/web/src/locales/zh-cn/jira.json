@@ -16,6 +16,7 @@
   "capOnOpenTasksCreatedBy": "限制此监控创建的进行中任务数量。留空表示不限制。达到上限后，新匹配项会推迟到下次轮询。",
   "checkFailed": "检查失败：{{error}}",
   "checkNow": "立即检查",
+  "checkingJiraStatus": "正在检查 Jira 状态…",
   "connectThisWorkspaceToAtlassianCloud": "将此工作区连接到 Atlassian Cloud 或自托管的 Jira Server / Data Center 实例。凭据会在服务器端加密存储，并仅用于所选工作区。",
   "connectedAs": "已连接为 {{name}}",
   "cookieExpired": "Cookie 已过期——请粘贴新的 Cookie",
