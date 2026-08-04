@@ -6,7 +6,7 @@ import { useGitHubStatus } from "@/hooks/domains/github/use-github-status";
 import { useGitLabAvailable } from "@/hooks/domains/gitlab/use-task-mr";
 import { useJiraAvailable } from "@/hooks/domains/jira/use-jira-availability";
 import { useLinearAvailable } from "@/hooks/domains/linear/use-linear-availability";
-import type { AvailabilityMap } from "@/lib/navigation/destinations";
+import type { AvailabilityMap } from "@/lib/navigation/types";
 import type { GitHubStatus } from "@/lib/types/github";
 
 function getStatusLabel(loading: boolean | undefined): string {
@@ -21,7 +21,7 @@ export function getGitHubIntegrationStatus(status: GitHubStatus | null, loading:
 
 /**
  * Availability map the navigation manifest filters on
- * (`lib/navigation/destinations.ts`) — currently which integrations are
+ * (`lib/navigation/`) — currently which integrations are
  * configured. Extend here when a destination gains a gate.
  *
  * Extracted from `useConfiguredIntegrationLinks` so the sidebar link list and the

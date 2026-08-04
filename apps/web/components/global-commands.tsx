@@ -15,7 +15,7 @@ import {
   IconSparkles,
 } from "@tabler/icons-react";
 import { useStaticDestinations } from "@/hooks/use-app-destinations";
-import { PALETTE_NAVIGATION_GROUP_KEY } from "@/lib/navigation/destinations";
+import { PALETTE_NAVIGATION_GROUP_KEY } from "@/lib/navigation/surface-policy";
 import { useRegisterCommands } from "@/hooks/use-register-commands";
 import { useKeyboardShortcut } from "@/hooks/use-keyboard-shortcut";
 import { useAppShortcuts } from "@/hooks/use-app-shortcuts";
@@ -48,7 +48,7 @@ function searchKeywords(t: TFunction, key: string): string[] {
 
 /**
  * The Navigation group comes from the navigation manifest
- * (`lib/navigation/destinations.ts`), so a destination cannot reach the palette
+ * (`lib/navigation/core-destinations.ts`), so a destination cannot reach the palette
  * without also being offered on the surfaces it declares. Command ids and copy
  * live in each destination's `palette` block — they are stable API for tests and
  * telemetry. The Settings group below stays hand-written: those are deep links

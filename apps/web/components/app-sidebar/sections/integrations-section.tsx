@@ -6,7 +6,7 @@ import { usePathname } from "@/lib/routing/client-router";
 import { IconPlugConnected } from "@tabler/icons-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@kandev/ui/tooltip";
 import { useAppDestinations } from "@/hooks/use-app-destinations";
-import type { DestinationIcon, ResolvedDestination } from "@/lib/navigation/destinations";
+import type { DestinationIcon, ResolvedDestination } from "@/lib/navigation/types";
 import { cn } from "@/lib/utils";
 import {
   APP_SIDEBAR_SECTION_IDS,

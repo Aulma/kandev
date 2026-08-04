@@ -5,7 +5,7 @@ import { MobileKanbanPage } from "../../pages/mobile-kanban-page";
  * Mobile reachability for `/stats`. The route's only entry points used to be the
  * desktop-only sidebar footer (`hidden md:block`) and a keyboard-only command
  * palette entry, so on a phone the page could only be reached by typing the URL.
- * It is now a navigation-manifest destination (`lib/navigation/destinations.ts`),
+ * It is now a navigation-manifest destination (`lib/navigation/core-destinations.ts`),
  * which puts it in the hamburger sheet's utility group.
  */
 test.describe("Stats on mobile", () => {

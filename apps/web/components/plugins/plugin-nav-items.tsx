@@ -1,7 +1,8 @@
 "use client";
 
 import { AppSidebarNavItem } from "@/components/app-sidebar/app-sidebar-nav-item";
-import { NO_WORKSPACE_CONTEXT, resolveDestinations } from "@/lib/navigation/destinations";
+import { resolveDestinations } from "@/lib/navigation/resolve-destinations";
+import { NO_WORKSPACE_CONTEXT } from "@/lib/navigation/surface-policy";
 import { usePluginRegistry } from "@/lib/plugins/registry";
 
 type PluginNavItemsProps = {
@@ -27,7 +28,7 @@ export function PluginNavItems({ collapsed }: PluginNavItemsProps) {
     surface: "sidebar",
     section: "plugins",
     ctx: NO_WORKSPACE_CONTEXT,
-    pluginItems: registry.getNavItems(),
+    pluginItems: registry.getNavRegistrations(),
   });
 
   return (

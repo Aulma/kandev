@@ -1,7 +1,8 @@
 "use client";
 
 import { DestinationRows } from "@/components/navigation/destination-rows";
-import { NO_WORKSPACE_CONTEXT, resolveDestinations } from "@/lib/navigation/destinations";
+import { resolveDestinations } from "@/lib/navigation/resolve-destinations";
+import { NO_WORKSPACE_CONTEXT } from "@/lib/navigation/surface-policy";
 import { usePluginRegistry } from "@/lib/plugins/registry";
 
 type MobilePluginNavSectionProps = {
@@ -26,7 +27,7 @@ export function MobilePluginNavSection({ onNavigate }: MobilePluginNavSectionPro
     surface: "mobileMenu",
     section: "plugins",
     ctx: NO_WORKSPACE_CONTEXT,
-    pluginItems: registry.getNavItems(),
+    pluginItems: registry.getNavRegistrations(),
   });
 
   if (destinations.length === 0) return null;

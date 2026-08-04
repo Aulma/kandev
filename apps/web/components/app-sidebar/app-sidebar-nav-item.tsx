@@ -2,7 +2,7 @@
 
 import Link from "@/components/routing/app-link";
 import { usePathname } from "@/lib/routing/client-router";
-import type { DestinationIcon } from "@/lib/navigation/destinations";
+import type { DestinationIcon } from "@/lib/navigation/types";
 import { Badge } from "@kandev/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@kandev/ui/tooltip";
 import { cn } from "@/lib/utils";

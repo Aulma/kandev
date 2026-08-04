@@ -20,7 +20,7 @@ import { MobileIntegrationsSection } from "@/components/integrations/integration
 import { DestinationRows } from "@/components/navigation/destination-rows";
 import { MobilePluginNavSection } from "@/components/plugins/mobile-plugin-nav-section";
 import { useStaticDestinations } from "@/hooks/use-app-destinations";
-import { MOBILE_MENU_UTILITY_SECTIONS } from "@/lib/navigation/destinations";
+import { MOBILE_MENU_UTILITY_SECTIONS } from "@/lib/navigation/surface-policy";
 import { TaskSearchInput } from "./task-search-input";
 import {
   MobileTasksListOptions,

@@ -4,7 +4,7 @@ import { IconBrandGithub, IconBrandGitlab, IconChartBar, IconHexagon } from "@ta
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AzureDevOpsIcon } from "@/components/icons/azure-devops-icon";
-import type { ResolvedDestination } from "@/lib/navigation/destinations";
+import type { ResolvedDestination } from "@/lib/navigation/types";
 
 const navigationMock = vi.hoisted(() => ({
   pathname: "/",
@@ -36,7 +36,7 @@ vi.mock("@/components/state-provider", () => ({
 
 // The section renders whatever the navigation manifest resolves for the sidebar's
 // integrations group; availability gating and plugin merging are covered in
-// `lib/navigation/destinations.test.ts`.
+// `lib/navigation/core-destinations.test.ts`.
 vi.mock("@/hooks/use-app-destinations", () => ({
   useAppDestinations: destinationsMock,
 }));

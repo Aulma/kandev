@@ -4,15 +4,15 @@ import { useTranslation } from "react-i18next";
 import { useAppStore } from "@/components/state-provider";
 import { useInOffice } from "@/hooks/use-in-office";
 import { useNavAvailability } from "@/hooks/use-nav-availability";
-import {
-  resolveDestinations,
-  type GatedNavSection,
-  type NavContext,
-  type NavSurface,
-  type ResolvedDestination,
-  type StaticNavSection,
-} from "@/lib/navigation/destinations";
+import { resolveDestinations } from "@/lib/navigation/resolve-destinations";
 import { usePluginRegistry } from "@/lib/plugins/registry";
+import type {
+  GatedNavSection,
+  NavContext,
+  NavSurface,
+  ResolvedDestination,
+  StaticNavSection,
+} from "@/lib/navigation/types";
 
 /** Active workspace and mode, the inputs a destination href may depend on. */
 export function useNavContext(): NavContext {
@@ -50,7 +50,7 @@ export function useAppDestinations(
     ctx,
     availability,
     translate: t,
-    pluginItems: registry.getNavItems(),
+    pluginItems: registry.getNavRegistrations(),
   });
 }
 
@@ -60,7 +60,7 @@ export function useAppDestinations(
  * (whose one gated entry opts out via `palette.ignoreRequires`).
  *
  * Identical to `useAppDestinations` minus the availability subscription, so
- * these surfaces cost no background requests. `destinations.test.ts` enforces
+ * these surfaces cost no background requests. `core-destinations.test.ts` enforces
  * the invariant that makes this safe: nothing outside `GATED_SECTIONS` declares
  * `requires`, and every palette entry is either ungated or opted out.
  *
@@ -88,6 +88,6 @@ export function useStaticDestinations(
     ...(section ? { section } : {}),
     ctx,
     translate: t,
-    pluginItems: registry.getNavItems(),
+    pluginItems: registry.getNavRegistrations(),
   });
 }

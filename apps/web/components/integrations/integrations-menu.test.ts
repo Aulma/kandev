@@ -91,8 +91,8 @@ afterEach(() => {
 
 // `getGitHubIntegrationStatus` now lives in `hooks/use-nav-availability` with the
 // rest of the manifest's availability gating, and the link table moved into
-// `lib/navigation/destinations`. Their unit coverage moved with them —
-// see `hooks/use-nav-availability.test.ts` and `lib/navigation/destinations.test.ts`.
+// `lib/navigation/`. Their unit coverage moved with them — see
+// `hooks/use-nav-availability.test.ts` and `lib/navigation/*.test.ts`.
 
 describe("IntegrationsMenu", () => {
   it("opens configured integration links on hover", async () => {

@@ -21,7 +21,7 @@ vi.mock("@/lib/routing/client-router", () => ({
 }));
 
 vi.mock("@/lib/plugins/registry", () => ({
-  usePluginRegistry: () => ({ getNavItems: () => [] }),
+  usePluginRegistry: () => ({ getNavRegistrations: () => [] }),
 }));
 
 import { useAppDestinations, useStaticDestinations } from "./use-app-destinations";

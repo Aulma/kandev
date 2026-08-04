@@ -12,7 +12,7 @@ import {
   IconWifiOff,
 } from "@tabler/icons-react";
 import { useStaticDestinations } from "@/hooks/use-app-destinations";
-import type { DestinationIcon } from "@/lib/navigation/destinations";
+import type { DestinationIcon } from "@/lib/navigation/types";
 import { Button } from "@kandev/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@kandev/ui/tooltip";
 import { ImproveKandevDialog } from "@/components/improve-kandev-dialog";

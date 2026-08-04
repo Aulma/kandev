@@ -2,7 +2,7 @@
 
 import { Button } from "@kandev/ui/button";
 import Link from "@/components/routing/app-link";
-import type { ResolvedDestination } from "@/lib/navigation/destinations";
+import type { ResolvedDestination } from "@/lib/navigation/types";
 import { cn } from "@/lib/utils";
 
 type DestinationRowsProps = {

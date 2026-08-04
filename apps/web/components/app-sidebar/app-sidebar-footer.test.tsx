@@ -45,7 +45,7 @@ vi.mock("@/hooks/domains/features/use-feature", () => ({
 }));
 
 // The footer renders its insight buttons from the navigation manifest; the
-// manifest itself is covered in `lib/navigation/destinations.test.ts`.
+// manifest itself is covered in `lib/navigation/core-destinations.test.ts`.
 vi.mock("@/hooks/use-app-destinations", () => ({
   useStaticDestinations: () => [
     {
