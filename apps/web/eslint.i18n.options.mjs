@@ -694,7 +694,13 @@ export const i18nGuardFiles = [
   // union, and the `configure_session` rule `operation`s. Workflow and step
   // NAMES are user data throughout and are always interpolated as values,
   // never built into a message by concatenation.
-  "app/settings/workspace/[id]/workflows/**/*.{ts,tsx}",
+  // `[[]id[]]`, not `[id]`: glob brackets are a character class, so the
+  // unescaped form matches nothing and the entry silently guards no files.
+  // This one and the two under Workspaces were escaped by #2247, which hit the
+  // same trap on its own dynamic route. `pnpm lint` is unchanged by the repair,
+  // so these directories were always clean — just unguarded. See docs/i18n.md
+  // ("An entry can be born dead").
+  "app/settings/workspace/[[]id[]]/workflows/**/*.{ts,tsx}",
   "app/settings/workspace/use-workflow-creation.ts",
   "app/settings/workspace/workspace-workflows-client.tsx",
   "app/settings/workspace/workspace-workflows-dialogs.tsx",
@@ -933,8 +939,8 @@ export const i18nGuardFiles = [
   // workspace's own name, so there is no translatable type-to-confirm token
   // here to break; the name travels into the sentence as an interpolated value.
   "app/settings/workspace/page.tsx",
-  "app/settings/workspace/[id]/page.tsx",
-  "app/settings/workspace/[id]/repositories/page.tsx",
+  "app/settings/workspace/[[]id[]]/page.tsx",
+  "app/settings/workspace/[[]id[]]/repositories/page.tsx",
   "app/settings/workspace/workspace-edit-client.tsx",
   "app/settings/workspace/workspace-not-found-card.tsx",
   "app/settings/workspace/workspace-repositories-client.tsx",
@@ -1128,4 +1134,69 @@ export const i18nGuardFiles = [
   //     chrome — and `configuration-chat-toggle.tsx`, which `ConfigChatSetup`
   //     renders — is still English and belongs to the quick-chat migration.
   "components/config-chat/*.{ts,tsx}",
+
+  // Automations — `components/automations/**` (incl. `trigger-configs/`) and
+  // the three `app/settings/**/automations/**` routes. Copy lives in a new
+  // `automations` namespace, except three strings reused verbatim from
+  // `common`: `common:automations` (the word SEGMENT_LABEL_KEYS already names
+  // as this settings route's owner), `common:cancel`, `common:status` and
+  // `common:requestFailed` — each diffed byte-for-byte against what the live
+  // surface rendered before reusing it. Inside the namespace the reverse call
+  // was made for "Webhook": the badge, the card summary and the picker's group
+  // heading get one key each rather than sharing one, because they are three
+  // different grammatical contexts and a language that inflects them
+  // differently would otherwise have nowhere to say so.
+  //
+  // Most of this directory's copy was invisible to the guard. `pnpm run
+  // lint:i18n` reported 116; the migration converted 156. The extra 40 were in
+  // shapes the rule does not inspect: SCREAMING_CASE config tables
+  // (`TRIGGER_LABELS`, `STATUS_BADGE`, `EXECUTION_MODE_ITEMS`, `PRESETS` in two
+  // files, `CRON_PRESETS`/`SIMPLE_SUMMARIES`/`TRIGGER_INFO`, `CI_CONCLUSIONS`,
+  // `PR_EVENTS`, `CATEGORY_META`), plain functions returning copy
+  // (`getTriggerSummary`, `getWorkflowStepHelpText`, `inputValueFor`), toasts
+  // and a save-contributor `invalidReason` in `automation-editor.tsx`, an
+  // `sr-only` "required" the guard's single-lowercase-token pattern skipped,
+  // and `automation-repository-selection.ts` — a `.ts` module with no JSX that
+  // reported 0 and held a picker option label.
+  //
+  // Persisted/protocol strings deliberately left in English, because a
+  // translated one breaks a stored automation with nothing failing until a
+  // locale switch: `DEFAULT_PROMPT` in `automation-editor.tsx` (persisted, sent
+  // to the agent verbatim, and compared with `===`), the `"New Automation"` and
+  // `"New Repository"` name fallbacks (both written to a record), every cron
+  // expression and shorthand, every TriggerType / RunStatus / ExecutionMode /
+  // PR-event / CI-conclusion id, `X-Webhook-Secret`, the `{{webhook.*}}`
+  // placeholder paths, and the example values in `placeholder` attributes
+  // (branch names, CI check names, GitHub usernames, a sample JSON body).
+  // `run.trigger_type` renders raw in the runs table for the same reason.
+  // Where syntax appears inside a sentence it travels as an interpolation
+  // value, so the pseudo-locale cannot accent it into something that no longer
+  // parses.
+  //
+  // NOT listed, and deliberately so:
+  //   - `components/task-create-dialog-multi-repo-guard.ts`. Its three disabled
+  //     -executor explanations render as a `title` in this editor's Executor
+  //     Profile picker, so they are migrated here (into `common:multiRepo*`),
+  //     but the module is shared with the un-migrated task-create dialog and
+  //     belongs to neither. Allowlisting it would claim a completeness that
+  //     dialog has not had; whichever migration takes the dialog adds it.
+  //   - `formatRelativeTime` in `lib/utils.ts`, which the runs table and the
+  //     automations table both render. It is a repo-wide formatter with 21
+  //     consumers and `lib/i18n/formats.ts` already holds its intended
+  //     replacement (`formatRelative`); swapping it is a cross-cutting change,
+  //     not part of a copy migration.
+  //
+  // NOTE the `[[]id[]]` escaping on the dynamic route. Written as `[id]`, the
+  // brackets are a glob CHARACTER CLASS matching a single `i` or `d`, so the
+  // pattern matches nothing and the route is silently unguarded — verified by
+  // putting a hardcoded literal in `automations/new/page.tsx` and watching
+  // `pnpm lint` report 0 errors. `check-guard-allowlist.mjs` cannot catch this:
+  // it only inspects entries that LEFT the array, so an entry that never
+  // matched anything looks identical to a healthy one. `fs.globSync` on the
+  // escaped form is what proves an entry is live.
+  "components/automations/*.{ts,tsx}",
+  "components/automations/trigger-configs/*.tsx",
+  "app/settings/automations/page.tsx",
+  "app/settings/workspace/[[]id[]]/automations/**/*.tsx",
+  "hooks/domains/settings/use-automation-runs.ts",
 ];
