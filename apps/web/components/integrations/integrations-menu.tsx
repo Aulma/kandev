@@ -24,7 +24,7 @@ const HOVER_CLOSE_DELAY_MS = 180;
 /**
  * Configured integration destinations, in manifest order. Ids, labels, hrefs and
  * icons come from `lib/navigation/core-destinations.ts`; availability comes from
- * `useIntegrationAvailability`.
+ * `useNavAvailability` through `useAppDestinations`.
  */
 function useIntegrationDestinations() {
   return useAppDestinations("sidebar", "integrations");

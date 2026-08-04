@@ -4,8 +4,9 @@
  * coverage guardrail honest. Split out from the catalog so a policy change is
  * reviewable on its own.
  *
- * Open decisions recorded here rather than encoded, pending the navigation
- * ADR/spec (see `docs/plans/`, tracked as a follow-up to this manifest):
+ * Open decisions recorded here rather than encoded; see
+ * `docs/decisions/2026-08-04-navigation-manifest-boundaries.md` for the durable
+ * contract and tradeoffs:
  *
  * - **Per-surface ordering.** Catalog array position is currently the render
  *   order on all three surfaces at once. That is intentional while the surfaces
