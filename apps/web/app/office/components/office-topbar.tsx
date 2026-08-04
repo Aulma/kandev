@@ -1,27 +1,30 @@
 "use client";
 
+import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
+import { OfficeNavigationSection } from "@/components/app-sidebar/sections/office-navigation-section";
+import { PageShell } from "@/components/page-shell";
 import { usePathname } from "@/lib/routing/client-router";
-import { AppStatusDrawerTrigger } from "@/components/app-status-bar/app-status-surface-provider";
 
-const PAGE_TITLES: Record<string, string> = {
-  "/office": "Dashboard",
-  "/office/inbox": "Inbox",
-  "/office/tasks": "Tasks",
-  "/office/routines": "Routines",
-  "/office/projects": "Projects",
-  "/office/agents": "Agents",
-  "/office/workspace/org": "Org Chart",
-  "/office/workspace/skills": "Skills",
-  "/office/workspace/costs": "Costs",
-  "/office/workspace/activity": "Activity",
-  "/office/workspace/routing": "Provider Routing",
-  "/office/workspace/settings": "Preferences",
+const PAGE_TITLE_KEYS: Record<string, string> = {
+  "/office": "sidebar:dashboard",
+  "/office/inbox": "sidebar:inbox",
+  "/office/tasks": "sidebar:tasks",
+  "/office/routines": "sidebar:routines",
+  "/office/projects": "sidebar:projects",
+  "/office/agents": "common:agents",
+  "/office/workspace/org": "sidebar:orgChart",
+  "/office/workspace/skills": "sidebar:skills",
+  "/office/workspace/costs": "sidebar:costs",
+  "/office/workspace/activity": "sidebar:activity",
+  "/office/workspace/routing": "sidebar:providerRouting",
+  "/office/workspace/settings": "sidebar:preferences",
 };
 
-function resolveTitle(pathname: string): string | null {
-  const exact = PAGE_TITLES[pathname];
+function resolveTitleKey(pathname: string): string | null {
+  const exact = PAGE_TITLE_KEYS[pathname];
   if (exact) return exact;
-  if (pathname.startsWith("/office/workspace/settings")) return "Preferences";
+  if (pathname.startsWith("/office/workspace/settings")) return "sidebar:preferences";
   return null;
 }
 
@@ -35,26 +38,49 @@ function isDetailPage(pathname: string): boolean {
 }
 
 /**
- * Office topbar. For list pages shows a static title. For detail pages
- * renders a portal target (#office-topbar-slot) that the page component
- * fills with its breadcrumb via OfficeTopbarPortal.
+ * Office's sections for the phone nav sheet — the same component the desktop
+ * sidebar renders, compacted to the sheet's touch-row sizing. Without this,
+ * office navigation exists only in the `hidden md:block` sidebar.
  */
-export function OfficeTopbar() {
+function OfficePageNav() {
+  return (
+    <div className="flex flex-col gap-2 [&_a]:min-h-10 [&_a]:text-sm [&_svg]:h-4 [&_svg]:w-4">
+      <OfficeNavigationSection collapsed={false} />
+    </div>
+  );
+}
+
+/**
+ * Office page chrome on the shared `PageShell`. List pages show a static
+ * title; detail pages render a portal target (#office-topbar-slot) that the
+ * page component fills with its breadcrumb via OfficeTopbarPortal. Both paint
+ * paths (`src/office-routes.tsx` and `app/office/layout.tsx`) wrap their route
+ * output in this shell so they cannot drift.
+ */
+export function OfficeShell({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
   const pathname = usePathname();
-  const title = resolveTitle(pathname);
+  const titleKey = resolveTitleKey(pathname);
   const detail = isDetailPage(pathname);
+  const title = titleKey ? t(titleKey) : "";
 
   return (
-    <div
-      data-testid="office-topbar"
-      className="flex h-10 min-h-11 shrink-0 items-center gap-2 border-b border-border bg-background px-4 md:min-h-10"
+    <PageShell
+      title={title}
+      variant="root"
+      backLabel=""
+      topbarTestId="office-topbar"
+      className="gap-2 bg-background px-4"
+      pageNav={<OfficePageNav />}
+      leading={
+        detail ? (
+          <div id="office-topbar-slot" className="flex items-center gap-2 flex-1 min-w-0" />
+        ) : (
+          titleKey && <h1 className="truncate text-sm font-medium text-foreground">{title}</h1>
+        )
+      }
     >
-      {detail ? (
-        <div id="office-topbar-slot" className="flex items-center gap-2 flex-1 min-w-0" />
-      ) : (
-        title && <h1 className="truncate text-sm font-medium text-foreground">{title}</h1>
-      )}
-      <AppStatusDrawerTrigger className="ml-auto" />
-    </div>
+      {children}
+    </PageShell>
   );
 }

@@ -8,7 +8,7 @@ import AgentMemoryPage from "@/app/office/agents/[id]/memory/page";
 import AgentPermissionsPage from "@/app/office/agents/[id]/permissions/page";
 import AgentSkillsPage from "@/app/office/agents/[id]/skills/page";
 import { AgentsPageClient } from "@/app/office/agents/agents-page-client";
-import { OfficeTopbar } from "@/app/office/components/office-topbar";
+import { OfficeShell } from "@/app/office/components/office-topbar";
 import { InboxPageClient } from "@/app/office/inbox/inbox-page-client";
 import { OfficePageClient } from "@/app/office/page-client";
 import { ProjectsPageClient } from "@/app/office/projects/projects-page-client";
@@ -107,10 +107,7 @@ export function OfficeRoutes({ pathname }: { pathname: string }) {
   return (
     <TooltipProvider>
       <div className="flex h-full min-h-0 flex-col">
-        <OfficeTopbar />
-        <main className="flex-1 min-h-0 overflow-y-auto">
-          {renderOfficeRoute(normalizedPathname)}
-        </main>
+        <OfficeShell>{renderOfficeRoute(normalizedPathname)}</OfficeShell>
       </div>
     </TooltipProvider>
   );
