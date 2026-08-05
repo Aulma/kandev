@@ -7,6 +7,8 @@ import { Button } from "@kandev/ui/button";
 import { Separator } from "@kandev/ui/separator";
 import { Textarea } from "@kandev/ui/textarea";
 import { SettingsPageTemplate } from "@/components/settings/settings-page-template";
+import { SettingsTarget } from "@/components/settings/settings-target";
+import { GENERAL_SETTINGS_TARGETS } from "@/lib/settings-discovery/catalog/general";
 import { Combobox, type ComboboxOption } from "@/components/combobox";
 import { EditableCard } from "@/components/settings/editable-card";
 import { LspStatusLocationSetting } from "@/components/settings/lsp-status-location-setting";
@@ -447,7 +449,7 @@ export function EditorsSettings() {
       onSave={() => saveDefaultRequest.run()}
     >
       <div className="space-y-6">
-        <div className="space-y-4">
+        <SettingsTarget targetId={GENERAL_SETTINGS_TARGETS.fileEditor} className="space-y-4">
           <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {t("settings:fileEditor")}
           </div>
@@ -472,7 +474,7 @@ export function EditorsSettings() {
             setExpandedConfigLang={state.setExpandedConfigLang}
             updateLspConfigString={updateLspConfigString}
           />
-        </div>
+        </SettingsTarget>
         <Separator />
         <EditorsSection
           defaultOptions={defaultOptions}

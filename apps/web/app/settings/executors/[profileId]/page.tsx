@@ -29,7 +29,7 @@ import {
   rowsToEnvVars,
   envVarsToRows,
 } from "@/components/settings/profile-edit/env-vars-card";
-import { ScriptCard } from "@/components/settings/profile-edit/script-card";
+import { ProfileScriptCards } from "@/components/settings/profile-edit/profile-script-cards";
 import { SSHAgentReadinessCard } from "@/components/settings/ssh-agent-readiness-card";
 import {
   type GitIdentityMode,
@@ -60,6 +60,7 @@ import {
 } from "@/components/settings/profile-edit/executor-profile-baselines";
 import type { Executor, ExecutorProfile, ExecutorType, ProfileEnvVar } from "@/lib/types/http";
 import type { NetworkPolicyRule } from "@/lib/api/domains/settings-api";
+import { executorProfileDiscoveryTarget } from "@/lib/settings-discovery/dynamic-targets";
 
 const EXECUTORS_ROUTE = "/settings/executors";
 const SPRITES_TOKEN_KEY = "SPRITES_API_TOKEN";
@@ -417,15 +418,10 @@ type ProfileEditSectionsProps = {
   secrets: ReturnType<typeof useSecrets>["items"];
 };
 
-function ProfileEditSections({ executor, profile, form, secrets }: ProfileEditSectionsProps) {
+function ExecutorSpecificSections({ executor, profile, form, secrets }: ProfileEditSectionsProps) {
   const gitIdentityBaseline = getGitIdentityBaseline(profile, form.localGitIdentity);
   return (
     <>
-      <ProfileDetailsCard
-        name={form.name}
-        baselineName={profile.name}
-        onNameChange={form.setName}
-      />
       {executor.type === "ssh" && (
         <SSHAgentReadinessCard
           executorId={executor.id}
@@ -478,6 +474,25 @@ function ProfileEditSections({ executor, profile, form, secrets }: ProfileEditSe
           secrets={secrets}
         />
       )}
+    </>
+  );
+}
+
+function ProfileEditSections({ executor, profile, form, secrets }: ProfileEditSectionsProps) {
+  return (
+    <>
+      <ProfileDetailsCard
+        name={form.name}
+        baselineName={profile.name}
+        onNameChange={form.setName}
+        discoveryTargetId={executorProfileDiscoveryTarget(profile.id, "profile-details")}
+      />
+      <ExecutorSpecificSections
+        executor={executor}
+        profile={profile}
+        form={form}
+        secrets={secrets}
+      />
       <EnvVarsCard
         rows={form.envVarRows}
         baselineRows={envVarsToRows(profile.env_vars)}
@@ -485,50 +500,30 @@ function ProfileEditSections({ executor, profile, form, secrets }: ProfileEditSe
         onAdd={form.addEnvVar}
         onUpdate={form.updateEnvVar}
         onRemove={form.removeEnvVar}
+        discoveryTargetId={executorProfileDiscoveryTarget(profile.id, "environment-variables")}
       />
-      <ProfileScriptCards executor={executor} profile={profile} form={form} />
+      <ProfileScriptCards
+        executorType={executor.type}
+        profileId={profile.id}
+        scripts={{
+          isRemote: form.isRemote,
+          prepareDescription: form.prepareDesc,
+          prepareValue: form.prepareScript,
+          prepareBaseline: profile.prepare_script ?? "",
+          onPrepareChange: form.setPrepareScript,
+          cleanupValue: form.cleanupScript,
+          cleanupBaseline: profile.cleanup_script ?? "",
+          onCleanupChange: form.setCleanupScript,
+          placeholders: form.placeholders,
+        }}
+      />
       <McpPolicyCard
         mcpPolicy={form.mcpPolicy}
         baselinePolicy={profile.mcp_policy ?? ""}
         mcpPolicyErrorKey={form.mcpPolicyErrorKey}
         onPolicyChange={form.setMcpPolicy}
+        discoveryTargetId={executorProfileDiscoveryTarget(profile.id, "mcp-policy")}
       />
-    </>
-  );
-}
-
-/** The prepare/cleanup script pair, split out to keep ProfileEditSections
- *  under the max-lines-per-function budget. */
-function ProfileScriptCards({
-  executor,
-  profile,
-  form,
-}: Omit<ProfileEditSectionsProps, "secrets">) {
-  const { t } = useTranslation();
-  return (
-    <>
-      <ScriptCard
-        title={t("executors:prepareScript")}
-        description={form.prepareDesc}
-        value={form.prepareScript}
-        baselineValue={profile.prepare_script ?? ""}
-        onChange={form.setPrepareScript}
-        height="300px"
-        placeholders={form.placeholders}
-        executorType={executor.type}
-      />
-      {form.isRemote && (
-        <ScriptCard
-          title={t("executors:cleanupScript")}
-          description={t("executors:runsAfterTheAgentSessionEnds")}
-          value={form.cleanupScript}
-          baselineValue={profile.cleanup_script ?? ""}
-          onChange={form.setCleanupScript}
-          height="200px"
-          placeholders={form.placeholders}
-          executorType={executor.type}
-        />
-      )}
     </>
   );
 }
