@@ -1164,11 +1164,13 @@ export const i18nGuardFiles = [
   //   - `components/settings/config-chat-agent-section.tsx`, the Configuration
   //     Chat card on Settings → Utility Agents. #2218 migrates it with the page
   //     that owns it, into `settings:configChatAgent*`.
-  //   - `components/quick-chat/**`. `quick-chat-modal.tsx` renders
-  //     `ConfigChatSetup` in its `presentation="dialog"` form and calls
-  //     `useConfigChat`, so it inherits everything migrated here, but its own
-  //     chrome — and `configuration-chat-toggle.tsx`, which `ConfigChatSetup`
-  //     renders — is still English and belongs to the quick-chat migration.
+  //
+  // `components/quick-chat/**` was the other entry here until #2300 migrated it
+  // — `quick-chat-modal.tsx` renders `ConfigChatSetup` in its
+  // `presentation="dialog"` form and calls `useConfigChat`, so it inherited
+  // everything migrated here, and its own chrome (plus
+  // `configuration-chat-toggle.tsx`, which `ConfigChatSetup` renders) now lands
+  // on the same `chat:` namespace. It is listed at the end of this file.
   "components/config-chat/*.{ts,tsx}",
 
   // Automations — `components/automations/**` (incl. `trigger-configs/`) and
@@ -1595,4 +1597,17 @@ export const i18nGuardFiles = [
   "components/kanban-with-preview.tsx",
   // Shared by the desktop dropdown and the mobile sheet; returns catalog keys.
   "lib/kanban/repository-placeholder.ts",
+  // The editor surfaces: Monaco/CodeMirror editors and diff viewers, the Shiki
+  // and Monaco code blocks, the TipTap plan editor, and the file-actions menu.
+  // Copy lands in the `editors:` namespace.
+  //
+  // Two of these files hold copy the rule cannot see, so it is recorded here
+  // rather than enforced: `tiptap-mermaid-extension.ts` and the CodeMirror
+  // gutter marker in `use-codemirror-editor-state.ts` build DOM imperatively
+  // from ProseMirror/CodeMirror callbacks, which have no hook scope, so both
+  // resolve through the module-level `t` from `@/lib/i18n`.
+  "components/editors/**/*.{ts,tsx}",
+  // Quick chat: the modal, its tabs, the setup form and the delete dialog.
+  // Copy lands in the existing `chat:` namespace, shared with config chat.
+  "components/quick-chat/**/*.{ts,tsx}",
 ];
