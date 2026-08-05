@@ -42,7 +42,8 @@ import {
   TaskActionsSettings,
 } from "@/components/settings/general-settings";
 import { SettingsIndex } from "@/components/settings/settings-index";
-import { readLastSettingsPath, rememberSettingsPath } from "@/lib/settings/last-settings-page";
+import { readLastSettingsPath } from "@/lib/settings/last-settings-page";
+import { SettingsRedirect, useRememberSettingsPath } from "./settings-route-helpers";
 import { NotificationsSettings } from "@/components/settings/notifications-settings";
 import { LayoutSettings } from "@/components/settings/layouts/layout-settings";
 import { PromptsSettings } from "@/components/settings/prompts-settings";
@@ -88,7 +89,6 @@ import {
 } from "@/lib/api/domains/settings-api";
 import { listWorkflowTemplates } from "@/lib/api/domains/workflow-api";
 import { listRepositories, listWorkspaces } from "@/lib/api/domains/workspace-api";
-import { useRouter } from "@/lib/routing/client-router";
 import { safeDecodePathSegment } from "@/lib/routing/path";
 import {
   mapWorkspaceItem,
@@ -253,11 +253,7 @@ export function SettingsRoutes({ pathname }: { pathname: string }) {
   // (async bundle load) re-resolves without requiring a navigation.
   usePluginRegistry();
 
-  // Where bare `/settings` sends this device next time. Recorded here, where the
-  // route table is in scope, so a path that does not resolve is never stored.
-  useEffect(() => {
-    rememberSettingsPath(normalizedPathname, SETTINGS_ROUTE_PATHS);
-  }, [normalizedPathname]);
+  useRememberSettingsPath(normalizedPathname, SETTINGS_ROUTE_PATHS);
 
   return (
     <>
@@ -463,16 +459,6 @@ function UpdatesRoute() {
       <UpdatesCard />
     </SystemRouteShell>
   );
-}
-
-function SettingsRedirect({ to }: { to: string }) {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace(to);
-  }, [router, to]);
-
-  return null;
 }
 
 function SettingsRouteBootstrap({ pathname }: { pathname: string }) {
