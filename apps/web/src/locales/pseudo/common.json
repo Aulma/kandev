@@ -1,12 +1,14 @@
 {
   "aboutContextCompactionCount": "Àƀōũţ ĩńƒēŕŕēď ćōḿƥàćţĩōń ćōũńţ",
+  "activeSubagents_one": "{{count}} śũƀàĝēńţ ŕũńńĩńĝ",
+  "activeSubagents_other": "{{count}} śũƀàĝēńţś ŕũńńĩńĝ",
   "agents": "Àĝēńţś",
   "automations": "Àũţōḿàţĩōńś",
   "backToTaskOverview": "Ɓàćķ ţō ţàśķ ōvēŕvĩēŵ",
+  "breadcrumb": "ƀŕēàďćŕũḿƀ",
   "cancel": "Ćàńćēĺ",
   "changelog": "Ćĥàńĝēĺōĝ",
   "commandAgentsSettingsKeywords": "àĝēńţś, àĝēńţ śēţţĩńĝś, àĝēńţ ƥŕōƒĩĺēś, ĩńśţàĺĺēď àĝēńţś, ćĺàũďē",
-  "breadcrumb": "ƀŕēàďćŕũḿƀ",
   "commandConfigChatKeywords": "ćōńƒĩĝ ćĥàţ, ćōńƒĩĝ ḿōďē, ćōńƒĩĝũŕē ķàńďēv, ŵōŕķƒĺōŵ ćōńƒĩĝũŕàţĩōń, ḿćƥ ćōńƒĩĝũŕàţĩōń",
   "commandExecutorsSettingsKeywords": "ēxēćũţōŕś, ēxēćũţōŕ ƥŕōƒĩĺēś, ēxēćũţĩōń ēńvĩŕōńḿēńţ, ēńvĩŕōńḿēńţ vàŕĩàƀĺēś, ŕũńţĩḿē, ćōḿƥũţē",
   "commandGoToAllTasks": "Ĝō ţō Àĺĺ Ţàśķś",
@@ -47,9 +49,11 @@
   "multiRepoUnavailableLocal": "Ḿũĺţĩ-ŕēƥō ţàśķś àŕē ũńàvàĩĺàƀĺē ōń Ĺōćàĺ ũńţĩĺ ĩţś ĩńĩţĩàĺ ĺàũńćĥ ƥàţĥ ćàń ƥŕōĵēćţ śĩƀĺĩńĝ ŕēƥōśĩţōŕĩēś.",
   "multiRepoUnavailableRemoteDocker": "Ḿũĺţĩ-ŕēƥō ţàśķś àŕē ũńàvàĩĺàƀĺē ōń Ŕēḿōţē Ďōćķēŕ ũńţĩĺ ĩţ śũƥƥōŕţś ćŕēàţĩńĝ ţàśķ ĩńśţàńćēś.",
   "multiRepoUnsupportedExecutor": "Ḿũĺţĩ-ŕēƥō ţàśķś àŕē ńōţ śũƥƥōŕţēď ƀŷ ţĥĩś ēxēćũţōŕ.",
+  "openFullPage": "Ōƥēń ƒũĺĺ ƥàĝē",
+  "openingLastTask": "Ōƥēńĩńĝ ĺàśţ ţàśķ…",
+  "panels": "Ƥàńēĺś",
   "pluginPanelFailedToLoad": "Ţĥĩś ƥĺũĝĩń ƥàńēĺ ƒàĩĺēď ţō ĺōàď.",
   "pluginPanelUnavailable": "Ţĥĩś ƥàńēĺ ĩś ńō ĺōńĝēŕ àvàĩĺàƀĺē.",
-  "panels": "Ƥàńēĺś",
   "plugins": "Ƥĺũĝĩńś",
   "prDetails": "ƤŔ Ďēţàĩĺś",
   "presetIconBug": "Ɓũĝ",
@@ -86,8 +90,5 @@
   "unknownPanel": "Ũńķńōŵń ƥàńēĺ: {{component}}",
   "unsavedChanges": "Ũńśàvēď ćĥàńĝēś",
   "workspace": "Ŵōŕķśƥàćē",
-  "workspaces": "Ŵōŕķśƥàćēś",
-  "activeSubagents_one": "{{count}} śũƀàĝēńţ ŕũńńĩńĝ",
-  "activeSubagents_other": "{{count}} śũƀàĝēńţś ŕũńńĩńĝ",
-  "openFullPage": "Ōƥēń ƒũĺĺ ƥàĝē"
+  "workspaces": "Ŵōŕķśƥàćēś"
 }
