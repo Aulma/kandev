@@ -15,6 +15,8 @@
   "addTheTabToTheSelected": "Add the {{panel}} tab to the selected split.",
   "affectedKandevMcpTool": "Affected Kandev MCP tool",
   "agent": "Agent",
+  "agentGeneratedTaskTitles": "Agent-generated task titles",
+  "agentGeneratedTaskTitlesDescription": "When enabled, new task and subtask forms hide the manual title field and require a prompt. Kandev shows a provisional title using the prompt's first six words immediately, then asks the agent to replace it with a concise title targeting about three words. If the agent cannot rename the task, the provisional title remains available for you to edit. Existing and edited tasks keep their normal title field.",
   "apiTokenIsConfigured": "API token is configured.",
   "appearance": "Appearance",
   "appriseNotInstalled": "Apprise is not installed yet. You can add it later to enable remote notifications. <2>View installation instructions</2>.",
