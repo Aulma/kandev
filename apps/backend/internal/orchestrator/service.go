@@ -40,7 +40,6 @@ import (
 	"github.com/kandev/kandev/internal/task/models"
 	"github.com/kandev/kandev/internal/workflow/engine"
 	wfmodels "github.com/kandev/kandev/internal/workflow/models"
-	"github.com/kandev/kandev/internal/worktree"
 	v1 "github.com/kandev/kandev/pkg/api/v1"
 )
 
@@ -479,10 +478,20 @@ type Service struct {
 	// Automation service for handling automation triggers
 	automationService AutomationService
 
-	// Worktree manager — used to clean up ephemeral worktrees for run-mode
-	// automation tasks immediately on completion rather than waiting for
-	// the 24h Office GC. Nil-safe.
-	worktreeMgr *worktree.Manager
+	// Worktree reaper — reclaims the workspaces of automation runs that have
+	// aged out of the per-automation retention window. Nil-safe: most tests
+	// construct the service without one, and an install with no worktree
+	// manager simply keeps every run's checkout. Set via SetWorktreeManager.
+	worktreeReaper automationWorktreeReaper
+
+	// unreclaimedWorkspaces holds the automation runs whose workspace removal
+	// was attempted and did not actually free the directory. Retention selects
+	// candidates by "still has a live worktree row", and a failed removal can
+	// leave a run with no live row and a full checkout, invisible to every
+	// later sweep — this is how it gets retried instead of written off. See
+	// queueAutomationWorkspaceReclaim.
+	unreclaimedWorkspaces   map[string]struct{}
+	unreclaimedWorkspacesMu sync.Mutex
 
 	// Clarification canceller — cancels pending clarifications when agent's turn completes
 	clarificationCanceller ClarificationCanceller
