@@ -32,7 +32,16 @@ const DEFAULT_PATHNAME = "/tasks/session-1";
 let pathname = DEFAULT_PATHNAME;
 
 vi.mock("@/lib/routing/client-router", () => ({
-  useRouter: () => ({ push: mocks.routerPush }),
+  useRouter: () => ({
+    push: (...args: [string, { onNavigated?: () => void }?]) => {
+      // Forward verbatim so callers passing no options still assert as a
+      // single-argument call.
+      mocks.routerPush(...args);
+      // The real router runs onNavigated only once the push commits; the
+      // unsaved-changes guard can cancel it, which `blockNavigation` models.
+      if (!blockNavigation) args[1]?.onNavigated?.();
+    },
+  }),
   usePathname: () => pathname,
 }));
 
@@ -121,6 +130,7 @@ function renderFooter() {
 
 function resetFooterState() {
   officeEnabled = false;
+  blockNavigation = false;
   pathname = DEFAULT_PATHNAME;
   state.workspaces.activeId = "kanban-1";
   state.workspaces.items = [
@@ -139,6 +149,8 @@ function resetFooterState() {
 }
 
 const KANBAN_HOME_HREF = "/?home=overview&workspaceId=kanban-1";
+let blockNavigation = false;
+
 const GEAR_TEST_ID = "sidebar-settings-gear";
 
 describe("AppSidebarFooter", () => {
@@ -235,7 +247,7 @@ describe("AppSidebarFooter settings gear", () => {
     renderFooter();
     fireEvent.click(screen.getByTestId(GEAR_TEST_ID));
 
-    expect(mocks.routerPush).toHaveBeenCalledWith("/settings");
+    expect(mocks.routerPush).toHaveBeenCalledWith("/settings", expect.anything());
     expect(mocks.toggleSettingsMode).toHaveBeenCalledOnce();
   });
 
@@ -259,8 +271,35 @@ describe("AppSidebarFooter settings gear", () => {
 
     // Swapping the sidebar back while the main panel stayed on a settings page
     // left kanban navigation beside an open settings page.
-    expect(mocks.routerPush).toHaveBeenCalledWith(KANBAN_HOME_HREF);
+    expect(mocks.routerPush).toHaveBeenCalledWith(KANBAN_HOME_HREF, expect.anything());
     expect(mocks.toggleSettingsMode).toHaveBeenCalledOnce();
+  });
+
+  // The unsaved-changes guard cancels the push when the user picks "Continue
+  // editing". Toggling anyway left the URL in Settings with the sidebar already
+  // back on kanban navigation.
+  it("keeps the sidebar in settings mode when the guard cancels the navigation", () => {
+    pathname = "/settings/general/appearance";
+    state.appSidebar.settingsMode = true;
+    blockNavigation = true;
+
+    renderFooter();
+    fireEvent.click(screen.getByTestId(GEAR_TEST_ID));
+
+    expect(mocks.routerPush).toHaveBeenCalledWith(KANBAN_HOME_HREF, expect.anything());
+    expect(mocks.toggleSettingsMode).not.toHaveBeenCalled();
+  });
+
+  it("does not open settings mode when the guard cancels the way in", () => {
+    pathname = DEFAULT_PATHNAME;
+    state.appSidebar.settingsMode = false;
+    blockNavigation = true;
+
+    renderFooter();
+    fireEvent.click(screen.getByTestId(GEAR_TEST_ID));
+
+    expect(mocks.routerPush).toHaveBeenCalledWith("/settings", expect.anything());
+    expect(mocks.toggleSettingsMode).not.toHaveBeenCalled();
   });
 
   it("does not navigate when the gear closes settings mode off a settings route", () => {
