@@ -290,6 +290,8 @@ export type TaskSessionStateChangedPayload = {
   cancellation_pending?: boolean;
   /** Process-local cancellation transition generation carried by state snapshots. */
   cancellation_revision?: number;
+  /** True when a send right now would steer the running turn; see http.ts. */
+  supports_steering?: boolean;
 };
 
 /**
@@ -302,6 +304,8 @@ export type TaskSessionActivityChangedPayload = {
   session_id: string;
   foreground_activity: ForegroundActivity | null;
   active_subagent_count: number;
+  /** True when a send right now would steer the running turn; see http.ts. */
+  supports_steering?: boolean;
 };
 
 export type TaskSessionCancellationChangedPayload = {
