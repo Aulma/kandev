@@ -14,6 +14,8 @@ import CreateProfilePage from "@/app/settings/executors/new/[type]/page";
 import SSHExecutorPage from "@/app/settings/executors/ssh/[executorId]/page";
 import ExternalMcpPage from "@/app/settings/external-mcp/page";
 import IntegrationsIndexPage from "@/app/settings/integrations/page";
+import { IntegrationsIndexPage as IntegrationsIndexPageClient } from "@/components/integrations/integrations-index-page";
+import IntegrationsGitHubPage from "@/app/settings/integrations/github/page";
 import IntegrationsAzureDevOpsPage from "@/app/settings/integrations/azure-devops/page";
 import IntegrationsGitLabPage from "@/app/settings/integrations/gitlab/page";
 import IntegrationsJiraPage from "@/app/settings/integrations/jira/page";
@@ -31,7 +33,6 @@ import WorkspaceEditPage from "@/app/settings/workspace/[id]/page";
 import { WorkspaceRepositoriesClient } from "@/app/settings/workspace/workspace-repositories-client";
 import { WorkspaceWorkflowsClient } from "@/app/settings/workspace/workspace-workflows-client";
 import WorkspacesPage from "@/app/settings/workspace/page";
-import { GitHubIntegrationPage } from "@/components/github/github-settings";
 import Link from "@/components/routing/app-link";
 import { useAppStoreApi } from "@/components/state-provider";
 import { EditorsSettings } from "@/components/settings/editors-settings";
@@ -385,11 +386,15 @@ function renderWorkspaceSettingsRoute(pathname: string) {
 function renderIntegrationSettingsRoute(section: string | null, workspaceId?: string) {
   switch (section) {
     case null:
-      return <IntegrationsIndexPage workspaceId={workspaceId} />;
+      return workspaceId ? (
+        <IntegrationsIndexPageClient workspaceId={workspaceId} />
+      ) : (
+        <IntegrationsIndexPage />
+      );
     case "azure-devops":
       return <IntegrationsAzureDevOpsPage workspaceId={workspaceId} />;
     case "github":
-      return <GitHubIntegrationPage workspaceId={workspaceId} />;
+      return <IntegrationsGitHubPage workspaceId={workspaceId} />;
     case "gitlab":
       return <IntegrationsGitLabPage workspaceId={workspaceId} />;
     case "jira":
