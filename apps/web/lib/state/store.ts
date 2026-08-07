@@ -243,6 +243,7 @@ export type AppState = KanbanSlice & {
   kanbanPreviewedTaskId: (typeof defaultUIState)["kanbanPreviewedTaskId"];
   sidebarTaskPrefs: (typeof defaultUIState)["sidebarTaskPrefs"];
   appSidebar: (typeof defaultUIState)["appSidebar"];
+  settingsMenu: (typeof defaultUIState)["settingsMenu"];
   acknowledgedAgentErrors: (typeof defaultUIState)["acknowledgedAgentErrors"];
   dismissedAgentErrors: (typeof defaultUIState)["dismissedAgentErrors"];
 
@@ -522,6 +523,10 @@ export type AppState = KanbanSlice & {
   setAppSidebarSettingsMode: UIA["setAppSidebarSettingsMode"];
   toggleAppSidebarSettingsMode: UIA["toggleAppSidebarSettingsMode"];
   setImproveDialogOpen: UIA["setImproveDialogOpen"];
+  previewSettingsMenuMode: UIA["previewSettingsMenuMode"];
+  commitSettingsMenuMode: UIA["commitSettingsMenuMode"];
+  restoreSettingsMenuMode: UIA["restoreSettingsMenuMode"];
+  setSettingsMenuExpandedKeys: UIA["setSettingsMenuExpandedKeys"];
   acknowledgeAgentErrors: UIA["acknowledgeAgentErrors"];
   dismissAgentError: UIA["dismissAgentError"];
 } & GitHubSliceActions &
