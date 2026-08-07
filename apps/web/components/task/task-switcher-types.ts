@@ -72,6 +72,8 @@ export type TaskSwitcherProps = {
   onTogglePin?: (taskId: string) => void;
   onReorderGroup?: (groupTaskIds: string[]) => void;
   onReorderSubtasks?: (parentTaskId: string, orderedSubtaskIds: string[]) => void;
+  /** Re-parent a task under another task (drag onto a nest drop zone). */
+  onNestTask?: (taskId: string, parentTaskId: string) => void;
   pinnedTaskIds?: string[];
   deletingTaskId?: string | null;
   isLoading?: boolean;
