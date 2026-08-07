@@ -1442,6 +1442,16 @@ func (s *Service) buildWorkflowPrompt(ctx context.Context, basePrompt string, st
 	return prompt
 }
 
+// workflowInstructionsHeading/End are stable, agent-facing markers for the
+// optional workflow-level prompt block. Chat collapses everything between
+// them by default. Do not i18n (sent to the model, same as step prompt English).
+// The end marker is required so multi-paragraph workflow prompts do not break
+// the frontend split (a first-blank-line heuristic would cut mid-body).
+const (
+	workflowInstructionsHeading = "## Workflow instructions"
+	workflowInstructionsEnd     = "<!-- /workflow-instructions -->"
+)
+
 func (s *Service) buildWorkflowPromptWithContext(
 	ctx context.Context,
 	basePrompt string,
@@ -1452,6 +1462,10 @@ func (s *Service) buildWorkflowPromptWithContext(
 ) (string, string) {
 	_ = sessionID
 	var parts []string
+
+	if block := s.workflowInstructionsBlock(ctx, step, taskID); block != "" {
+		parts = append(parts, block)
+	}
 
 	// Build the prompt from step.Prompt template and base prompt
 	if step.Prompt != "" {
@@ -1471,6 +1485,40 @@ func (s *Service) buildWorkflowPromptWithContext(
 
 	joined := strings.Join(parts, "\n\n")
 	return s.expandPromptReferencesWithContext(ctx, joined, isPassthrough)
+}
+
+// workflowInstructionsBlock returns the visible "## Workflow instructions"
+// section when the step's workflow has a non-empty prompt. Empty/whitespace
+// prompts and missing getters/workflows omit the section entirely.
+func (s *Service) workflowInstructionsBlock(ctx context.Context, step *wfmodels.WorkflowStep, taskID string) string {
+	if s.workflowStepGetter == nil || step == nil || step.WorkflowID == "" {
+		return ""
+	}
+	prompt, err := s.workflowStepGetter.GetWorkflowPrompt(ctx, step.WorkflowID)
+	if err != nil {
+		if s.logger != nil {
+			s.logger.Warn("failed to get workflow prompt for prompt building",
+				zap.String("workflow_id", step.WorkflowID),
+				zap.Error(err))
+		}
+		return ""
+	}
+	prompt = strings.TrimSpace(prompt)
+	if prompt == "" {
+		return ""
+	}
+	interpolated := strings.TrimSpace(sysprompt.InterpolatePlaceholders(prompt, taskID))
+	if interpolated == "" {
+		return ""
+	}
+	// Drop any accidental end-marker text from user content so chat split
+	// cannot cut the block early (frontend also prefers the final marker).
+	interpolated = strings.ReplaceAll(interpolated, workflowInstructionsEnd, "")
+	interpolated = strings.TrimSpace(interpolated)
+	if interpolated == "" {
+		return ""
+	}
+	return workflowInstructionsHeading + "\n\n" + interpolated + "\n\n" + workflowInstructionsEnd
 }
 
 // expandPromptReferences resolves "@name" saved-prompt references in prompt
