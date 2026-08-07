@@ -141,6 +141,7 @@
   "includeRecentBackendAndBrowserLogs": "Include recent backend & browser logs as context for the agent",
   "installed": "Installed",
   "integrations": "Integrations",
+  "interruptedByRestart": "Interrupted by restart",
   "justNow": "just now",
   "kandevAllowsEveryAgentPermissionRequest": "Kandev allows every agent permission request without prompting you.",
   "kandevCouldNotLoad": "Kandev couldn’t load.",
