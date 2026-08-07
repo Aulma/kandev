@@ -40,8 +40,12 @@ import (
 // mockStepGetter implements WorkflowStepGetter for testing.
 type mockStepGetter struct {
 	steps                  map[string]*wfmodels.WorkflowStep // stepID -> step
-	workflowAgentProfileID string                            // returned by GetWorkflowAgentProfileID
+	workflowAgentProfileID string                            // returned by GetWorkflowMeta
 	workflowPrompts        map[string]string                 // workflowID -> prompt
+	workflowMetaCalls      int                               // GetWorkflowMeta invocations
+	workflowMetaErr        error                             // optional error from GetWorkflowMeta
+	workflowMetaDelay      time.Duration                     // optional sleep before returning meta
+	workflowMetaMu         sync.Mutex                        // guards workflowMetaCalls for concurrent tests
 }
 
 func newMockStepGetter() *mockStepGetter {
@@ -82,18 +86,31 @@ func (m *mockStepGetter) GetPreviousStepByPosition(_ context.Context, workflowID
 	return best, nil
 }
 
-func (m *mockStepGetter) GetWorkflowAgentProfileID(_ context.Context, workflowID string) (string, error) {
-	if m.workflowAgentProfileID != "" {
-		return m.workflowAgentProfileID, nil
+func (m *mockStepGetter) GetWorkflowMeta(_ context.Context, workflowID string) (WorkflowMeta, error) {
+	m.workflowMetaMu.Lock()
+	m.workflowMetaCalls++
+	delay := m.workflowMetaDelay
+	m.workflowMetaMu.Unlock()
+	if delay > 0 {
+		time.Sleep(delay)
 	}
-	return "", nil
+	if m.workflowMetaErr != nil {
+		return WorkflowMeta{}, m.workflowMetaErr
+	}
+	prompt := ""
+	if m.workflowPrompts != nil {
+		prompt = m.workflowPrompts[workflowID]
+	}
+	return WorkflowMeta{
+		AgentProfileID: m.workflowAgentProfileID,
+		Prompt:         prompt,
+	}, nil
 }
 
-func (m *mockStepGetter) GetWorkflowPrompt(_ context.Context, workflowID string) (string, error) {
-	if m.workflowPrompts == nil {
-		return "", nil
-	}
-	return m.workflowPrompts[workflowID], nil
+func (m *mockStepGetter) metaCalls() int {
+	m.workflowMetaMu.Lock()
+	defer m.workflowMetaMu.Unlock()
+	return m.workflowMetaCalls
 }
 
 // mockTaskRepo implements scheduler.TaskRepository for testing.
