@@ -435,6 +435,7 @@ const (
 	ActionMCPStopTask            = "mcp.stop_task"
 	ActionMCPSpawnSession        = "mcp.spawn_session"
 	ActionMCPGetTaskConversation = "mcp.get_task_conversation"
+	ActionMCPListTaskSessions    = "mcp.list_task_sessions"
 )
 
 const (
