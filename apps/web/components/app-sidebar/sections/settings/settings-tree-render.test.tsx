@@ -85,7 +85,11 @@ vi.mock("@/hooks/domains/features/use-feature", () => ({
 }));
 
 vi.mock("@/hooks/domains/settings/use-secrets", () => ({
-  useSecrets: () => ({ items: [{ id: "secret-1" }, { id: "secret-2" }], loaded: true, loading: false }),
+  useSecrets: () => ({
+    items: [{ id: "secret-1" }, { id: "secret-2" }],
+    loaded: true,
+    loading: false,
+  }),
 }));
 
 vi.mock("@/hooks/domains/integrations/use-enabled-integrations", () => ({
@@ -172,12 +176,8 @@ describe("SettingsTree static menu", () => {
   it("marks the owning page row active for detail routes", () => {
     render(<SettingsTree pathname="/settings/agents/claude-code/profiles/profile-1" />);
 
-    expect(
-      screen.getByRole("link", { name: /^Agents/ }).getAttribute("data-active"),
-    ).toBe("true");
-    expect(
-      screen.getByRole("link", { name: /^Executors/ }).getAttribute("data-active"),
-    ).toBeNull();
+    expect(screen.getByRole("link", { name: /^Agents/ }).getAttribute("data-active")).toBe("true");
+    expect(screen.getByRole("link", { name: /^Executors/ }).getAttribute("data-active")).toBeNull();
   });
 
   it("hides auth-gated rows and the Access Control section when auth is disabled", () => {
@@ -240,7 +240,9 @@ describe("SettingsTree tree modes", () => {
 
   it("grows the branched rows into their records and opens the route's path", () => {
     setMenuMode("accordion");
-    render(<SettingsTree pathname={`/settings/workspaces/${MAIN_WORKSPACE_ID}/integrations/github`} />);
+    render(
+      <SettingsTree pathname={`/settings/workspaces/${MAIN_WORKSPACE_ID}/integrations/github`} />,
+    );
 
     // Workspaces › Main Workspace › Integrations › GitHub — the same chain the
     // breadcrumb renders on that page.
@@ -254,7 +256,9 @@ describe("SettingsTree tree modes", () => {
 
   it("marks only the deepest row active, never its ancestors", () => {
     setMenuMode("accordion");
-    render(<SettingsTree pathname={`/settings/workspaces/${MAIN_WORKSPACE_ID}/integrations/github`} />);
+    render(
+      <SettingsTree pathname={`/settings/workspaces/${MAIN_WORKSPACE_ID}/integrations/github`} />,
+    );
 
     expect(activeRowNames()).toEqual(["GitHub"]);
   });
@@ -393,7 +397,6 @@ describe("SettingsTree record treatment", () => {
       expect(row.innerHTML).not.toContain(RECORD_DOT);
     }
   });
-
 });
 
 describe("SettingsTree badges", () => {
@@ -426,8 +429,9 @@ describe("SettingsTree badges", () => {
     render(<SettingsTree pathname="/settings/preferences/appearance" />);
 
     // `MAIN_WORKSPACE_ID` is the active one in the mocked store.
-    expect(screen.getByRole("link", { name: new RegExp(MAIN_WORKSPACE_NAME) }).textContent)
-      .toContain("Active");
+    expect(
+      screen.getByRole("link", { name: new RegExp(MAIN_WORKSPACE_NAME) }).textContent,
+    ).toContain("Active");
   });
 
   it("badges only the active workspace", () => {
@@ -438,8 +442,9 @@ describe("SettingsTree badges", () => {
     setMenuMode("persistent", [WORKSPACES_ROW_KEY]);
     render(<SettingsTree pathname="/settings/preferences/appearance" />);
 
-    expect(screen.getByRole("link", { name: /Second Workspace/ }).textContent)
-      .not.toContain("Active");
+    expect(screen.getByRole("link", { name: /Second Workspace/ }).textContent).not.toContain(
+      "Active",
+    );
   });
 
   it("badges an agent whose CLI the scan cannot find", () => {
@@ -449,8 +454,7 @@ describe("SettingsTree badges", () => {
     render(<SettingsTree pathname="/settings/preferences/appearance" />);
 
     // Its profiles stay listed below, so the agent row says why none can run.
-    expect(screen.getByRole("button", { name: AGENT_ROW }).textContent)
-      .toContain("Not installed");
+    expect(screen.getByRole("button", { name: AGENT_ROW }).textContent).toContain("Not installed");
   });
 
   it("says nothing about installation before the scan has reported", () => {
@@ -461,17 +465,14 @@ describe("SettingsTree badges", () => {
 
     // "Not looked yet" is not "not installed" — badging here would flash a
     // wrong claim on every cold load.
-    expect(screen.getByRole("button", { name: AGENT_ROW }).textContent)
-      .not.toContain("Not installed");
+    expect(screen.getByRole("button", { name: AGENT_ROW }).textContent).not.toContain(
+      "Not installed",
+    );
   });
 
   it("badges an integration the workspace has connected", () => {
     integrationsEnabled.add("github");
-    setMenuMode("persistent", [
-      WORKSPACES_ROW_KEY,
-      WORKSPACE_KEY,
-      `${WORKSPACE_KEY}:integrations`,
-    ]);
+    setMenuMode("persistent", [WORKSPACES_ROW_KEY, WORKSPACE_KEY, `${WORKSPACE_KEY}:integrations`]);
     render(<SettingsTree pathname="/settings/preferences/appearance" />);
 
     expect(screen.getByRole("link", { name: /GitHub/ }).textContent).toContain("Enabled");

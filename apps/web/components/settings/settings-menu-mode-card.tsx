@@ -70,7 +70,9 @@ export function SettingsMenuModeCard({
               </Label>
             ))}
           </RadioGroup>
-          <p className="text-xs text-muted-foreground">{t("settings:settingsMenuShapePerDevice")}</p>
+          <p className="text-xs text-muted-foreground">
+            {t("settings:settingsMenuShapePerDevice")}
+          </p>
         </fieldset>
       </CardContent>
     </SettingsCard>

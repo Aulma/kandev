@@ -570,7 +570,9 @@ export function GitHubPageClient({
     >
       <div className="flex min-h-0 w-full flex-1 flex-col bg-background">
         {!loaded && (
-          <div className="p-6 text-sm text-muted-foreground">{t("github:checkingGithubStatus")}</div>
+          <div className="p-6 text-sm text-muted-foreground">
+            {t("github:checkingGithubStatus")}
+          </div>
         )}
         {loaded && !authed && (
           <div className="p-6 max-w-2xl">

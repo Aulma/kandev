@@ -60,7 +60,10 @@ export function useSettingsMenuBranches(mode: SettingsMenuMode): SettingsMenuBra
       ? new Set(detectedAgents(agentDiscovery).map((agent) => agent.name))
       : undefined;
     return {
-      ...branchEntry(WORKSPACES_SETTINGS_HREF, buildWorkspacesBranch(workspaces, activeWorkspaceId)),
+      ...branchEntry(
+        WORKSPACES_SETTINGS_HREF,
+        buildWorkspacesBranch(workspaces, activeWorkspaceId),
+      ),
       ...branchEntry(AGENTS_SETTINGS_HREF, buildAgentsBranch(orderedAgents, detectedNames)),
       ...branchEntry(EXECUTORS_SETTINGS_HREF, buildExecutorsBranch(executors)),
     };

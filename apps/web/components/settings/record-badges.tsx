@@ -33,13 +33,7 @@ export function ActiveWorkspaceBadge() {
   // Keeps its pill shape and slightly larger type: it predates the others and
   // the workspace list and switcher already draw it this way.
   return (
-    <span
-      className={cn(
-        BADGE_BASE,
-        BADGE_INFO,
-        "rounded-full px-1.5 text-[10px]",
-      )}
-    >
+    <span className={cn(BADGE_BASE, BADGE_INFO, "rounded-full px-1.5 text-[10px]")}>
       {t("sidebar:activeWorkspaceBadge")}
     </span>
   );
@@ -78,7 +72,5 @@ export function IntegrationEnabledBadge() {
  */
 export function DisabledBadge() {
   const { t } = useTranslation();
-  return (
-    <span className={cn(BADGE_BASE, BADGE_WARN)}>{t("sidebar:disabledBadge")}</span>
-  );
+  return <span className={cn(BADGE_BASE, BADGE_WARN)}>{t("sidebar:disabledBadge")}</span>;
 }

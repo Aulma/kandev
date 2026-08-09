@@ -106,10 +106,7 @@ import {
 import { mapUserSettingsResponse } from "@/lib/ssr/user-settings";
 import type { HydrationState } from "@/lib/state/store";
 import { toAgentProfileOption } from "@/lib/state/slices/settings/types";
-import type {
-  ListWorkspacesResponse,
-  UserSettingsResponse,
-} from "@/lib/types/http";
+import type { ListWorkspacesResponse, UserSettingsResponse } from "@/lib/types/http";
 import type { LicenseEntry } from "@/lib/types/system";
 import {
   WorkspaceRepositoriesRoute,
@@ -145,9 +142,7 @@ const SETTINGS_ROUTES: Record<string, RouteRenderer> = {
   "/settings/general": () => <SettingsRedirect to={APPEARANCE_SETTINGS_HREF} />,
   "/settings/general/appearance": () => <SettingsRedirect to={APPEARANCE_SETTINGS_HREF} />,
   "/settings/general/changes-panel": () => <SettingsRedirect to={APPEARANCE_SETTINGS_HREF} />,
-  "/settings/general/chat-input": () => (
-    <SettingsRedirect to={KEYBOARD_SHORTCUTS_SETTINGS_HREF} />
-  ),
+  "/settings/general/chat-input": () => <SettingsRedirect to={KEYBOARD_SHORTCUTS_SETTINGS_HREF} />,
   "/settings/general/editors": () => <SettingsRedirect to={TERMINAL_EDITORS_SETTINGS_HREF} />,
   "/settings/general/keyboard-shortcuts": () => (
     <SettingsRedirect to={KEYBOARD_SHORTCUTS_SETTINGS_HREF} />

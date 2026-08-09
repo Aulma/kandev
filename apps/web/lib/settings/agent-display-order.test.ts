@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  detectedAgents,
-  orderAgentsForDisplay,
-  orphanedAgents,
-} from "./agent-display-order";
+import { detectedAgents, orderAgentsForDisplay, orphanedAgents } from "./agent-display-order";
 
 const CLAUDE = "claude-acp";
 const CODEX = "codex-acp";
@@ -25,10 +21,7 @@ const SAVED = [
 
 describe("detectedAgents", () => {
   it("keeps only what the scan found, in scan order", () => {
-    expect(detectedAgents(DISCOVERY).map((agent) => agent.name)).toEqual([
-      CLAUDE,
-      MOCK,
-    ]);
+    expect(detectedAgents(DISCOVERY).map((agent) => agent.name)).toEqual([CLAUDE, MOCK]);
   });
 });
 

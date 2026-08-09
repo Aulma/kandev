@@ -22,7 +22,11 @@ test.describe("Settings index on a phone", () => {
   test("offers no nav drawer anywhere in settings", async ({ testPage }) => {
     await testPage.setViewportSize({ width: 390, height: 844 });
 
-    for (const path of ["/settings", "/settings/preferences/terminal-editors", "/settings/prompts"]) {
+    for (const path of [
+      "/settings",
+      "/settings/preferences/terminal-editors",
+      "/settings/prompts",
+    ]) {
       await testPage.goto(path);
       await expect(testPage.getByTestId("settings-scroll-container")).toBeVisible();
       // A sheet here would offer the list the index page already is.

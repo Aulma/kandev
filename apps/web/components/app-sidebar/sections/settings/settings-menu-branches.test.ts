@@ -65,8 +65,7 @@ describe("buildWorkspacesBranch", () => {
   it("gives every tab and every integration its own mark", () => {
     const [workspace] = buildWorkspacesBranch(WORKSPACES);
     const tabs = workspace.children ?? [];
-    const integrations =
-      tabs.find((node) => node.href?.endsWith("/integrations"))?.children ?? [];
+    const integrations = tabs.find((node) => node.href?.endsWith("/integrations"))?.children ?? [];
 
     // A row with no icon sits text-first and breaks the column the rest form.
     expect(tabs.every((node) => node.icon !== undefined)).toBe(true);
@@ -107,8 +106,7 @@ describe("isUserRecord", () => {
   it("leaves fixed structure unmarked, including at a record's own depth", () => {
     const [workspace] = buildWorkspacesBranch(WORKSPACES);
     const tabs = workspace.children ?? [];
-    const integrations =
-      tabs.find((node) => node.href?.endsWith("/integrations"))?.children ?? [];
+    const integrations = tabs.find((node) => node.href?.endsWith("/integrations"))?.children ?? [];
 
     // These are the assertions that hold the line: a workspace's tabs are a
     // fixed six, and the integrations a fixed seven, in every install — even

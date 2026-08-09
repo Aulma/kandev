@@ -20,10 +20,7 @@ type IntegrationSlug = (typeof WORKSPACE_INTEGRATIONS)[number][0];
  * then fails to compile until it has a mark, instead of silently rendering a
  * generic one. The catalog owns slug → brand name; this owns slug → icon.
  */
-export const INTEGRATION_ICONS: Record<
-  IntegrationSlug,
-  ComponentType<{ className?: string }>
-> = {
+export const INTEGRATION_ICONS: Record<IntegrationSlug, ComponentType<{ className?: string }>> = {
   "azure-devops": AzureDevOpsIcon,
   github: IconBrandGithub,
   gitlab: IconBrandGitlab,

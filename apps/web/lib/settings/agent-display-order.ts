@@ -17,9 +17,7 @@ export type DiscoveredAgent = { name: string; available: boolean };
 export type SavedAgent = { name: string; profiles: ReadonlyArray<unknown> };
 
 /** Agents the scan currently detects, in rank order. */
-export function detectedAgents<D extends DiscoveredAgent>(
-  discovery: ReadonlyArray<D>,
-): D[] {
+export function detectedAgents<D extends DiscoveredAgent>(discovery: ReadonlyArray<D>): D[] {
   return discovery.filter((agent) => agent.available);
 }
 

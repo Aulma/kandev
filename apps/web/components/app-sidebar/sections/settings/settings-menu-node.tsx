@@ -10,10 +10,7 @@ import {
   NotInstalledBadge,
 } from "@/components/settings/record-badges";
 import type { SettingsMenuNode } from "./settings-menu-branches";
-import {
-  IntegrationEnabledBadgeFor,
-  IntegrationsEnabledProvider,
-} from "./integration-enabled";
+import { IntegrationEnabledBadgeFor, IntegrationsEnabledProvider } from "./integration-enabled";
 import { RecordGlyph, SettingsBranch, SettingsLeaf } from "./settings-nav-primitives";
 import type { SettingsMenuExpansion } from "./use-settings-menu-expansion";
 

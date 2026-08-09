@@ -15,7 +15,12 @@ import { Button } from "@kandev/ui/button";
 import { Card, CardContent } from "@kandev/ui/card";
 import { Separator } from "@kandev/ui/separator";
 import { useAppStore } from "@/components/state-provider";
-import { createCustomTUIAgent, listAgentDiscovery, listAgents, listAvailableAgents } from "@/lib/api";
+import {
+  createCustomTUIAgent,
+  listAgentDiscovery,
+  listAgents,
+  listAvailableAgents,
+} from "@/lib/api";
 import type { AgentUpdateJob, AgentUpdatePreview, InstallJob } from "@/lib/api";
 import { useAgentDiscovery } from "@/hooks/domains/settings/use-agent-discovery";
 import { useAgentRuntimeUpdates } from "@/hooks/domains/settings/use-agent-runtime-updates";
@@ -32,12 +37,7 @@ import {
   type DiscoveredAgent,
 } from "@/lib/settings/agent-display-order";
 import { toAgentProfileOption } from "@/lib/state/slices/settings/types";
-import type {
-  AgentDiscovery,
-  Agent,
-  AvailableAgent,
-  RuntimeUpdate,
-} from "@/lib/types/http";
+import type { AgentDiscovery, Agent, AvailableAgent, RuntimeUpdate } from "@/lib/types/http";
 
 type InstalledAgentsSectionProps = {
   installedAgents: AgentDiscovery[];

@@ -82,10 +82,7 @@ function WorkspaceListItem({ workspace }: { workspace: Workspace }) {
   const activeId = useAppStore((s) => s.workspaces.activeId);
   const isActive = workspace.id === activeId;
   const { counts, settled } = useWorkspaceSectionCounts(workspace.id);
-  const total = Object.values(counts).reduce(
-    (sum, value) => sum + (value ?? 0),
-    0,
-  );
+  const total = Object.values(counts).reduce((sum, value) => sum + (value ?? 0), 0);
   return (
     <Card
       className={cn(

@@ -75,7 +75,11 @@ const RANGE_LABEL_KEYS: Record<RangeKey, string> = {
 function StatsEmptyState({ message }: { message: string }) {
   const { t } = useTranslation();
   return (
-    <PageShell title={t("stats:statistics")} icon={<IconChartBar className="h-4 w-4" />} scroll="none">
+    <PageShell
+      title={t("stats:statistics")}
+      icon={<IconChartBar className="h-4 w-4" />}
+      scroll="none"
+    >
       <div className="flex min-h-0 flex-1 items-center justify-center bg-background">
         <p className="text-muted-foreground">{message}</p>
       </div>

@@ -2,24 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  IconCheck,
-  IconClipboard,
-  IconDownload,
-  IconExternalLink,
-} from "@tabler/icons-react";
+import { IconCheck, IconClipboard, IconDownload, IconExternalLink } from "@tabler/icons-react";
 import { Button } from "@kandev/ui/button";
 import { Card, CardContent } from "@kandev/ui/card";
 import { useAppStore } from "@/components/state-provider";
 import { InstallAgentCard } from "@/components/settings/install-agent-card";
 import { useAgentDiscovery } from "@/hooks/domains/settings/use-agent-discovery";
 import { useAvailableAgents } from "@/hooks/domains/settings/use-available-agents";
-import {
-  installAgent,
-  listAgentDiscovery,
-  listAvailableAgents,
-  listInstallJobs,
-} from "@/lib/api";
+import { installAgent, listAgentDiscovery, listAvailableAgents, listInstallJobs } from "@/lib/api";
 import type { InstallJob } from "@/lib/api";
 import { copyToClipboard } from "@/lib/utils/copy-to-clipboard";
 import type { AvailableAgent, ToolStatus } from "@/lib/types/http";

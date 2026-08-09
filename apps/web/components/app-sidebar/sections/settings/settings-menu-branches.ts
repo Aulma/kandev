@@ -259,9 +259,7 @@ export function buildAgentsBranch(
  * breadcrumb — so it is the one whose crumb chain matches the branch the user
  * clicked through.
  */
-export function buildExecutorsBranch(
-  executors: ReadonlyArray<BranchExecutor>,
-): SettingsMenuNode[] {
+export function buildExecutorsBranch(executors: ReadonlyArray<BranchExecutor>): SettingsMenuNode[] {
   return executors.map((executor) => {
     const executorHref = `/settings/executor/${encodeURIComponent(executor.id)}`;
     return {
@@ -313,10 +311,7 @@ export function findActiveNodePath(
  * empty array when no node carries it. Expanding a node has to expand its
  * ancestors too — otherwise the row it reveals has nowhere to appear.
  */
-export function findNodeKeyPath(
-  nodes: ReadonlyArray<SettingsMenuNode>,
-  key: string,
-): string[] {
+export function findNodeKeyPath(nodes: ReadonlyArray<SettingsMenuNode>, key: string): string[] {
   for (const node of nodes) {
     if (node.key === key) return [node.key];
     const deeper = findNodeKeyPath(node.children ?? [], key);
@@ -335,10 +330,7 @@ function subtreeKeys(node: SettingsMenuNode): string[] {
  * they are hidden either way, and leaving them stored reopens a sub-branch the
  * user last saw closed.
  */
-export function findSubtreeKeys(
-  nodes: ReadonlyArray<SettingsMenuNode>,
-  key: string,
-): string[] {
+export function findSubtreeKeys(nodes: ReadonlyArray<SettingsMenuNode>, key: string): string[] {
   for (const node of nodes) {
     if (node.key === key) return subtreeKeys(node);
     const deeper = findSubtreeKeys(node.children ?? [], key);

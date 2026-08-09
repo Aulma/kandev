@@ -3,10 +3,7 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import {
-  workspaceSettingsTabSpec,
-  type WorkspaceSettingsTab,
-} from "./workspace-settings-shell";
+import { workspaceSettingsTabSpec, type WorkspaceSettingsTab } from "./workspace-settings-shell";
 
 /**
  * The heading every workspace settings tab opens with.
