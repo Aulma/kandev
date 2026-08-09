@@ -1342,6 +1342,33 @@ func TestBootPayloadIncludesDebugRuntimeWhenDevMode(t *testing.T) {
 	}
 }
 
+func TestBootPayloadCarriesConfiguredTitlePrefix(t *testing.T) {
+	t.Parallel()
+
+	payload := bootPayload(
+		context.Background(),
+		nil,
+		routeParams{webTitlePrefix: "TEST"},
+		webapp.ClassifyRoute("/"),
+	)
+	if got := payload.Runtime.TitlePrefix; got != "TEST" {
+		t.Fatalf("runtime.titlePrefix = %q, want %q", got, "TEST")
+	}
+}
+
+func TestBootPayloadOmitsUnsetTitlePrefix(t *testing.T) {
+	t.Parallel()
+
+	payload := bootPayload(context.Background(), nil, routeParams{}, webapp.ClassifyRoute("/"))
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("Marshal payload: %v", err)
+	}
+	if strings.Contains(string(raw), "titlePrefix") {
+		t.Fatalf("expected titlePrefix to be omitted, got: %s", raw)
+	}
+}
+
 func TestBootPayloadRestoresQuickChatSessions(t *testing.T) {
 	harness := newBootStateTestHarness(t)
 	ctx := context.Background()
