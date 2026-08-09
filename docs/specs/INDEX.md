@@ -94,6 +94,7 @@ Kandev's task model: documents, execution stages, labels, blocker escalation, su
 | [external-id-idempotency](tasks/external-id-idempotency/spec.md) | draft |
 | [prompt-attachments](tasks/prompt-attachments.md) | draft |
 | [sidebar-task-edit](tasks/sidebar-task-edit.md) | approved |
+| [autopilot-mode](tasks/autopilot-mode.md) | draft |
 | [explicit-completion-signal](workflow/explicit-completion-signal/spec.md) | shipped |
 | [cancelled-turn-completion](workflow/cancelled-turn-completion/spec.md) | building |
 | [conditional-session-settings](workflow-session-settings/spec.md) | approved |
