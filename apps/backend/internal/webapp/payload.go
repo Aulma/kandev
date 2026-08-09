@@ -47,9 +47,10 @@ type RuntimeConfig struct {
 	// "en". Also drives the shell's <html lang> so first paint matches.
 	Locale string `json:"locale,omitempty"`
 	// TitlePrefix distinguishes Kandev instances in adjacent browser tabs. It
-	// carries the raw operator-configured prefix (KANDEV_WEB_TITLE_PREFIX), not
-	// the composed title: the shell rewrites <title> server-side for first
-	// paint, and the SPA composes the same "<prefix> Kandev" for the
+	// carries the operator-configured prefix (KANDEV_WEB_TITLE_PREFIX) with
+	// surrounding whitespace trimmed, not the composed title: the shell
+	// rewrites <title> server-side for first paint, and the SPA composes the
+	// same "<prefix> Kandev" for the
 	// /api/v1/app-state boot path, which never renders through the shell.
 	TitlePrefix string `json:"titlePrefix,omitempty"`
 }

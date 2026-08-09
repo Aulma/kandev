@@ -92,7 +92,10 @@ func rewriteTitle(indexHTML []byte, prefix string) []byte {
 }
 
 // titleContentBounds locates the text between the first <title ...> and its
-// closing </title>, reporting false when either tag is missing.
+// closing </title>, reporting false when either tag is missing. The byte scan
+// assumes the shell's first "<title" is the head's title element — the same
+// assumption rewriteHTMLLang makes for "<html" — which Vite-generated shells
+// satisfy; a "<title" inside an earlier comment or script would fool it.
 func titleContentBounds(indexHTML []byte) (start, end int, ok bool) {
 	tagStart := bytes.Index(indexHTML, titleOpenTag)
 	if tagStart < 0 {
