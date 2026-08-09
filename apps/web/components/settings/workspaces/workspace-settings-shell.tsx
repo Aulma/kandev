@@ -1,18 +1,23 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useCallback, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { IconFolder } from "@tabler/icons-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@kandev/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@kandev/ui/dropdown-menu";
 import Link from "@/components/routing/app-link";
 import { useAppStore } from "@/components/state-provider";
+import { useFeature } from "@/hooks/domains/features/use-feature";
 import { useRouter } from "@/lib/routing/client-router";
 import {
   WORKSPACE_SETTINGS_TABS,
   workspaceSettingsHref,
   type WorkspaceSettingsTab,
 } from "@/lib/settings/workspace-settings-tabs";
-import { ActiveWorkspaceBadge } from "@/components/settings/record-badges";
+import {
+  WorkspacePickerContent,
+  WorkspaceTrigger,
+  type WorkspaceItem,
+} from "@/components/workspaces/workspace-picker-content";
 import { cn } from "@kandev/ui/lib/utils";
 
 // The tab table and href builder are data — see `workspace-settings-tabs.ts`,
@@ -20,13 +25,93 @@ import { cn } from "@kandev/ui/lib/utils";
 // existing callers keep one import.
 // The badge is shared with the settings menu and the workspace list — see
 // `record-badges.tsx`. Re-exported so existing callers keep one import.
-export { ActiveWorkspaceBadge } from "@/components/settings/record-badges";
+import { ActiveWorkspaceBadge } from "@/components/settings/record-badges";
+
+export { ActiveWorkspaceBadge };
 
 export {
   workspaceSettingsHref,
   workspaceSettingsTabSpec,
   type WorkspaceSettingsTab,
 } from "@/lib/settings/workspace-settings-tabs";
+
+/**
+ * The workspace switcher this page is headed by — the same control the sidebar
+ * header draws, so the two read as one design (see
+ * `workspace-picker-content.tsx`). It is a page-to-page navigator, not an
+ * activation control: picking a workspace opens that workspace's copy of the
+ * tab you are on and leaves the active workspace alone. The "Active" pill in
+ * the list is what tells the two apart.
+ */
+function WorkspaceSettingsSwitcher({
+  workspaceName,
+  workspaceId,
+  activeTab,
+}: {
+  workspaceName: string;
+  workspaceId: string;
+  activeTab: WorkspaceSettingsTab;
+}) {
+  const router = useRouter();
+  const officeEnabled = useFeature("office");
+  const workspaces = useAppStore((s) => s.workspaces.items);
+  const activeId = useAppStore((s) => s.workspaces.activeId);
+  const [open, setOpen] = useState(false);
+
+  const handleSelect = useCallback(
+    (next: WorkspaceItem) => {
+      if (next.id !== workspaceId) {
+        router.push(workspaceSettingsHref(next.id, activeTab));
+      }
+      setOpen(false);
+    },
+    [router, workspaceId, activeTab],
+  );
+
+  const handleNavigate = useCallback(
+    (href: string) => {
+      router.push(href);
+      setOpen(false);
+    },
+    [router],
+  );
+
+  return (
+    <>
+      <DropdownMenu open={open} onOpenChange={setOpen}>
+        <DropdownMenuTrigger asChild>
+          <WorkspaceTrigger
+            activeName={workspaceName}
+            chevronTestId="workspace-settings-switcher-chevron"
+            data-testid="workspace-settings-switcher"
+            // Same control, sized for a page heading rather than a sidebar
+            // row, at a fixed 240px: long names truncate, short ones leave
+            // the chevron anchored instead of the header jumping per page.
+            className="h-9 w-60 flex-none gap-2 px-3 text-base font-semibold"
+          />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-72">
+          <WorkspacePickerContent
+            workspaces={workspaces}
+            activeId={activeId}
+            itemTestIdPrefix="workspace-settings-switcher-item"
+            officeEnabled={officeEnabled}
+            onWorkspaceSelect={handleSelect}
+            onNavigate={handleNavigate}
+          />
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {/* The page-level mark: the closed picker names the workspace being
+          edited, so when that is also the active one, say so without opening
+          the menu. */}
+      {workspaceId === activeId && (
+        <span data-testid="workspace-settings-active-badge" className="shrink-0">
+          <ActiveWorkspaceBadge />
+        </span>
+      )}
+    </>
+  );
+}
 
 /**
  * The tabbed shell every workspace settings page renders through: the
@@ -45,10 +130,24 @@ export function WorkspaceSettingsShell({
   children: ReactNode;
 }) {
   const { t } = useTranslation();
-  const router = useRouter();
   const workspaces = useAppStore((s) => s.workspaces.items);
-  const activeId = useAppStore((s) => s.workspaces.activeId);
   const workspace = workspaces.find((item) => item.id === workspaceId);
+  const tabsRef = useRef<HTMLElement | null>(null);
+
+  // Each tab is its own route, so navigating remounts this shell and the
+  // strip snaps back to its start — on a phone the pill you just tapped
+  // scrolls out of view. Centre the active pill before paint instead; when
+  // the strip fits (desktop rail), there is nothing to scroll and this is a
+  // no-op.
+  useLayoutEffect(() => {
+    const nav = tabsRef.current;
+    if (!nav || nav.scrollWidth <= nav.clientWidth) return;
+    const pill = nav.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!pill) return;
+    const navRect = nav.getBoundingClientRect();
+    const pillRect = pill.getBoundingClientRect();
+    nav.scrollLeft += pillRect.left - navRect.left - (nav.clientWidth - pillRect.width) / 2;
+  }, [activeTab]);
 
   return (
     <div className="space-y-6" data-testid="workspace-settings-shell">
@@ -58,31 +157,11 @@ export function WorkspaceSettingsShell({
             <IconFolder className="h-4 w-4" />
           </div>
           {workspace ? (
-            <Select
-              value={workspaceId}
-              onValueChange={(nextId) => {
-                if (nextId !== workspaceId) router.push(workspaceSettingsHref(nextId, activeTab));
-              }}
-            >
-              {/* The workspace name is the switcher: one control, no separate dropdown. */}
-              <SelectTrigger
-                className="-ml-2 h-auto w-auto max-w-full gap-2 border-none bg-transparent px-2 py-1 text-2xl font-bold shadow-none hover:bg-accent/50 [&>span]:min-w-0"
-                aria-label={t("sidebar:switchWorkspace")}
-                data-testid="workspace-settings-switcher"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {workspaces.map((item) => (
-                  <SelectItem key={item.id} value={item.id}>
-                    <span className="flex min-w-0 items-center gap-2">
-                      <span className="truncate">{item.name}</span>
-                      {item.id === activeId && <ActiveWorkspaceBadge />}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <WorkspaceSettingsSwitcher
+              workspaceName={workspace.name}
+              workspaceId={workspaceId}
+              activeTab={activeTab}
+            />
           ) : (
             <h2 className="truncate text-2xl font-bold">{t("common:workspace")}</h2>
           )}
@@ -94,6 +173,7 @@ export function WorkspaceSettingsShell({
           horizontally at both sizes; six sections outrun a phone's width, and
           wrapping them would push the page content below the fold. */}
       <nav
+        ref={tabsRef}
         aria-label={t("common:workspace")}
         className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide md:gap-1 md:border-b md:border-border md:pb-0"
         data-testid="workspace-settings-tabs"

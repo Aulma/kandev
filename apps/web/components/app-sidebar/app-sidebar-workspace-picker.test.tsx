@@ -235,6 +235,25 @@ describe("AppSidebarWorkspacePicker — active workspace display and routing", (
     expect(screen.getByTestId(OFFICE_WORKSPACE_ITEM).textContent).toContain("Office");
   });
 
+  it("marks the active workspace with the Active badge between its name and its type", () => {
+    storeState.workspaces.activeId = "w1";
+    render(<AppSidebarWorkspacePicker />);
+
+    const activeRow = screen.getByTestId(KANBAN_WORKSPACE_ITEM).textContent ?? "";
+    expect(activeRow).toContain("Active");
+    expect(activeRow.indexOf("Active")).toBeGreaterThan(activeRow.indexOf("Default Workspace"));
+    expect(activeRow.indexOf("Active")).toBeLessThan(activeRow.indexOf("Kanban"));
+  });
+
+  it("leaves non-active workspace rows unbadged and drops the check icon", () => {
+    storeState.workspaces.activeId = "w1";
+    const { container } = render(<AppSidebarWorkspacePicker />);
+
+    expect(screen.getByTestId(OFFICE_WORKSPACE_ITEM).textContent).not.toContain("Active");
+    expect(screen.getByTestId(ALTERNATE_KANBAN_WORKSPACE_ITEM).textContent).not.toContain("Active");
+    expect(container.querySelector(".tabler-icon-check")).toBeNull();
+  });
+
   it("renders the trigger as an obvious selector", () => {
     render(<AppSidebarWorkspacePicker />);
 
