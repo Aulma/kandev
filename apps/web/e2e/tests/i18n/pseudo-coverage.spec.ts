@@ -170,6 +170,27 @@ const SCREENS: Screen[] = [
     name: "settings — terminal & editors",
     url: "/settings/preferences/terminal-editors",
     anchor: "[data-testid=terminal-font-size-card]",
+    // Every entry is a `label` or a `binary` from `LSP_LANGUAGE_OPTIONS`
+    // (components/settings/lsp-language-options.ts), whose header states the
+    // rule these follow: a language name and an executable name are shown
+    // verbatim, and translating either would name a server that does not exist.
+    // The qualifier around them ("experimental") and the frame around the
+    // binaries in the `Auto-start {{language}} language server` aria-labels DO
+    // go through `t()`, and the attribute pass still checks that frame after
+    // these tokens are stripped. `Go` is absent on purpose: it is under the
+    // four-letter `wordlike` threshold, so it is never reported and adding it
+    // would only widen the mask; `gopls` is over it, so it is listed.
+    allow: [
+      "TypeScript / JavaScript",
+      "typescript-language-server",
+      "gopls",
+      "Rust",
+      "rust-analyzer",
+      "Python",
+      "pyright-langserver",
+      "Kotlin",
+      "kotlin-lsp",
+    ],
   },
   // NOT YET: "settings — sprites". The entry existed at `/settings/general/sprites`
   // with the `sprites-connection-card` anchor; this restructure folded that card
