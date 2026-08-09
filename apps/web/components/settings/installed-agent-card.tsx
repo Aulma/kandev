@@ -178,7 +178,11 @@ export function InstalledAgentCard({
             />
           )}
           {!hasAgentRecord && (
-            <Button size="sm" className="cursor-pointer" asChild>
+            // Sized to match the runtime-update trigger it sits beside — a
+            // coarse-pointer target on a phone, 28px from `sm` up. The default
+            // `sm` size (24px) both mismatched that neighbour on desktop and
+            // left a sub-target-size tap area on touch.
+            <Button className="h-11 cursor-pointer sm:h-7" asChild>
               <Link href={`/settings/agents/${encodeURIComponent(agent.name)}`}>
                 <IconSettings className="mr-2 h-4 w-4" />
                 {t("agents:setupProfile")}
