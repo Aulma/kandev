@@ -37,6 +37,11 @@ function hrefsOf(nodes: readonly SettingsMenuNode[]): Array<string | null> {
   return nodes.map((node) => node.href);
 }
 
+/** The Integrations tab among a workspace node's children. */
+function integrationsTabOf(tabs: readonly SettingsMenuNode[]): SettingsMenuNode | undefined {
+  return tabs.find((node) => node.href?.endsWith("/integrations"));
+}
+
 describe("buildWorkspacesBranch", () => {
   it("hangs each workspace's tabs under it, minus its own overview page", () => {
     const [workspace] = buildWorkspacesBranch(WORKSPACES);
@@ -53,9 +58,7 @@ describe("buildWorkspacesBranch", () => {
 
   it("goes one level deeper for integrations, the menu's deepest branch", () => {
     const [workspace] = buildWorkspacesBranch(WORKSPACES);
-    const integrations = (workspace.children ?? []).find((node) =>
-      node.href?.endsWith("/integrations"),
-    );
+    const integrations = integrationsTabOf(workspace.children ?? []);
 
     expect(hrefsOf(integrations?.children ?? [])).toContain(
       `/settings/workspaces/${WORKSPACE_ID}/integrations/github`,
@@ -65,7 +68,7 @@ describe("buildWorkspacesBranch", () => {
   it("gives every tab and every integration its own mark", () => {
     const [workspace] = buildWorkspacesBranch(WORKSPACES);
     const tabs = workspace.children ?? [];
-    const integrations = tabs.find((node) => node.href?.endsWith("/integrations"))?.children ?? [];
+    const integrations = integrationsTabOf(tabs)?.children ?? [];
 
     // A row with no icon sits text-first and breaks the column the rest form.
     expect(tabs.every((node) => node.icon !== undefined)).toBe(true);
@@ -79,6 +82,53 @@ describe("buildWorkspacesBranch", () => {
     const [workspace] = buildWorkspacesBranch([{ id: "a/b", name: "Slashy" }]);
 
     expect(workspace.href).toBe("/settings/workspaces/a%2Fb");
+  });
+});
+
+describe("buildWorkspacesBranch integration visibility", () => {
+  function integrationSlugsOf(nodes: readonly SettingsMenuNode[]): Array<string | undefined> {
+    return (integrationsTabOf(nodes)?.children ?? []).map((node) => node.integrationSlug);
+  }
+
+  it("lists every integration when no visible set is given — the default", () => {
+    const [workspace] = buildWorkspacesBranch(WORKSPACES);
+
+    expect(integrationSlugsOf(workspace.children ?? [])).toEqual([
+      "azure-devops",
+      "github",
+      "gitlab",
+      "jira",
+      "linear",
+      "sentry",
+    ]);
+  });
+
+  it("drops the integrations missing from the visible set, keeping catalog order", () => {
+    const [workspace] = buildWorkspacesBranch(
+      WORKSPACES,
+      null,
+      new Set(["azure-devops", "linear"] as const),
+    );
+
+    expect(integrationSlugsOf(workspace.children ?? [])).toEqual(["azure-devops", "linear"]);
+  });
+
+  it("never consults whether an integration is configured — the badge owns that", () => {
+    // Nothing about credentials reaches this builder: an integration the user
+    // has never connected is listed exactly like a connected one, so the
+    // visible set is the only thing that can remove a row.
+    const [workspace] = buildWorkspacesBranch(WORKSPACES, null, new Set(["github"] as const));
+
+    expect(integrationSlugsOf(workspace.children ?? [])).toEqual(["github"]);
+  });
+
+  it("leaves the Integrations row navigable when the set hides all of them", () => {
+    // An empty branch would otherwise render a chevron opening onto nothing.
+    const [workspace] = buildWorkspacesBranch(WORKSPACES, null, new Set());
+    const integrations = integrationsTabOf(workspace.children ?? []);
+
+    expect(integrations?.children).toEqual([]);
+    expect(integrations?.href).toBe(`/settings/workspaces/${WORKSPACE_ID}/integrations`);
   });
 });
 
@@ -106,7 +156,7 @@ describe("isUserRecord", () => {
   it("leaves fixed structure unmarked, including at a record's own depth", () => {
     const [workspace] = buildWorkspacesBranch(WORKSPACES);
     const tabs = workspace.children ?? [];
-    const integrations = tabs.find((node) => node.href?.endsWith("/integrations"))?.children ?? [];
+    const integrations = integrationsTabOf(tabs)?.children ?? [];
 
     // These are the assertions that hold the line: a workspace's tabs are a
     // fixed six, and the integrations a fixed seven, in every install — even

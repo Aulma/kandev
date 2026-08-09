@@ -14,18 +14,20 @@ import (
 
 // worktreeCutover holds the legacy inventory and the normalized result.
 type worktreeCutover struct {
-	envs          map[string]*legacyEnv
-	taskEnvs      map[string][]*legacyEnv
-	sessions      map[string]*legacySession
-	sessionTasks  map[string]string
-	sessionEnvIDs map[string]string
-	envRepos      []legacyEnvRepo
-	sessionWts    []legacySessionWorktree
-	tasks         map[string]*taskWorktreeTargets
-	taskEnvIDs    map[string]string
-	loserEnvIDs   map[string]bool
-	executorTypes map[string]string
-	conflicts     []string
+	envs                      map[string]*legacyEnv
+	taskEnvs                  map[string][]*legacyEnv
+	sessions                  map[string]*legacySession
+	sessionTasks              map[string]string
+	sessionEnvIDs             map[string]string
+	sessionWorktreeSuperseded map[string]bool
+	authoritativeWorktreeIDs  map[string]bool
+	envRepos                  []legacyEnvRepo
+	sessionWts                []legacySessionWorktree
+	tasks                     map[string]*taskWorktreeTargets
+	taskEnvIDs                map[string]string
+	loserEnvIDs               map[string]bool
+	executorTypes             map[string]string
+	conflicts                 []string
 }
 
 type legacyEnv struct {
@@ -38,6 +40,7 @@ type legacyEnv struct {
 
 type legacySession struct {
 	id, taskID, taskEnvironmentID string
+	state                         string
 	startedAt                     time.Time
 	executorID, executorProfileID string
 	repositoryID                  string
@@ -108,13 +111,13 @@ func (c *worktreeCutover) loadLegacySessions(tx *sqlx.Tx) error {
 	// scanned as a string because MIN() makes the driver return the raw
 	// TEXT value instead of a time.
 	rows, err := tx.Query(`
-		SELECT ts.id, ts.task_id, COALESCE(ts.task_environment_id, ''),
+		SELECT ts.id, ts.task_id, COALESCE(ts.task_environment_id, ''), ts.state,
 			COALESCE(ts.executor_id, ''), COALESCE(ts.executor_profile_id, ''),
 			COALESCE(ts.repository_id, ''), COALESCE(er.container_id, ''),
 			MIN(ts.started_at)
 		FROM task_sessions ts
 		LEFT JOIN executors_running er ON er.session_id = ts.id
-		GROUP BY ts.id, ts.task_id, ts.task_environment_id, ts.executor_id,
+		GROUP BY ts.id, ts.task_id, ts.task_environment_id, ts.state, ts.executor_id,
 			ts.executor_profile_id, ts.repository_id, er.container_id`)
 	if err != nil {
 		return fmt.Errorf("cutover: read legacy sessions: %w", err)
@@ -123,7 +126,7 @@ func (c *worktreeCutover) loadLegacySessions(tx *sqlx.Tx) error {
 	for rows.Next() {
 		s := &legacySession{}
 		var startedAt string
-		if err := rows.Scan(&s.id, &s.taskID, &s.taskEnvironmentID, &s.executorID,
+		if err := rows.Scan(&s.id, &s.taskID, &s.taskEnvironmentID, &s.state, &s.executorID,
 			&s.executorProfileID, &s.repositoryID, &s.containerID, &startedAt); err != nil {
 			return fmt.Errorf("cutover: scan legacy session: %w", err)
 		}
@@ -298,7 +301,9 @@ func (c *worktreeCutover) mergeLegacyEnvRepoRows() {
 		targets := c.targetsForTask(env.taskID)
 		if err := targets.mergeLegacyEnvRepo(row); err != nil {
 			c.conflicts = append(c.conflicts, fmt.Sprintf("environment %s repository row: %v", row.envID, err))
+			continue
 		}
+		c.recordAuthoritativeWorktree(env.taskID, row.worktreeID)
 	}
 }
 
@@ -312,7 +317,9 @@ func (c *worktreeCutover) mergeFlatEnvironmentFields() {
 		targets := c.targetsForTask(env.taskID)
 		if err := targets.mergeFlatEnv(env); err != nil {
 			c.conflicts = append(c.conflicts, fmt.Sprintf("environment %s flat worktree fields: %v", env.id, err))
+			continue
 		}
+		c.recordAuthoritativeWorktree(env.taskID, env.worktreeID)
 	}
 }
 
@@ -325,10 +332,25 @@ func (c *worktreeCutover) mergeSessionWorktrees() {
 			continue // already reported in load
 		}
 		targets := c.targetsForTask(session.taskID)
-		if err := targets.mergeSessionWorktree(wt); err != nil {
+		if err := targets.mergeSessionWorktree(wt, c.isSupersededSessionWorktree(wt)); err != nil {
 			c.conflicts = append(c.conflicts, fmt.Sprintf(
 				"session %s worktree %s: %v", wt.sessionID, wt.worktreeID, err))
 		}
+	}
+}
+
+func isLegacyDeletedWorktree(wt legacySessionWorktree) bool {
+	return wt.status == worktreeRepoStatusDeleted || wt.deletedAt != nil
+}
+
+// isLegacyHistoricalSession reports whether a session no longer represents an
+// open execution that can own a conflicting worktree during cutover.
+func isLegacyHistoricalSession(state string) bool {
+	switch state {
+	case "COMPLETED", "FAILED", "CANCELLED":
+		return true
+	default:
+		return false
 	}
 }
 
@@ -436,6 +458,51 @@ func (c *worktreeCutover) linkSessions() {
 		}
 		c.sessionEnvIDs[s.id] = c.taskEnvIDs[s.taskID]
 	}
+}
+
+// isSupersededSessionWorktree reports whether a legacy session row is no
+// longer an ownership source. Repository rows and the surviving flat
+// environment take precedence for the same physical identity regardless of
+// session state. Historical rows with no authoritative replacement remain
+// eligible for backfill.
+func (c *worktreeCutover) isSupersededSessionWorktree(wt legacySessionWorktree) bool {
+	cacheKey := wt.sessionID + "\x00" + wt.worktreeID
+	if superseded, ok := c.sessionWorktreeSuperseded[cacheKey]; ok {
+		return superseded
+	}
+
+	session, hasSession := c.sessions[wt.sessionID]
+	superseded := false
+	switch {
+	case isLegacyDeletedWorktree(wt):
+		superseded = true
+	case hasSession && c.authoritativeWorktreeIDs[authoritativeWorktreeKey(session.taskID, wt.worktreeID)]:
+		superseded = true
+	case hasSession && isLegacyHistoricalSession(session.state):
+		for _, row := range c.envRepos {
+			env, ok := c.envs[row.envID]
+			if !ok || env.taskID != session.taskID || row.worktreeID == "" {
+				continue
+			}
+			if row.repositoryID == wt.repositoryID && row.branchSlug == wt.branchSlug {
+				superseded = true
+				break
+			}
+		}
+	}
+	c.sessionWorktreeSuperseded[cacheKey] = superseded
+	return superseded
+}
+
+func (c *worktreeCutover) recordAuthoritativeWorktree(taskID, worktreeID string) {
+	if worktreeID == "" {
+		return
+	}
+	c.authoritativeWorktreeIDs[authoritativeWorktreeKey(taskID, worktreeID)] = true
+}
+
+func authoritativeWorktreeKey(taskID, worktreeID string) string {
+	return taskID + "\x00" + worktreeID
 }
 
 // registerWorktreeIdentities ensures every physical worktree is owned by

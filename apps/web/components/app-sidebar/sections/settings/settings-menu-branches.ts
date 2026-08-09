@@ -31,7 +31,7 @@ import {
  * `{ text }` for a record name or brand) so `t()` runs at render.
  */
 
-type IntegrationSlug = (typeof WORKSPACE_INTEGRATIONS)[number][0];
+export type IntegrationSlug = (typeof WORKSPACE_INTEGRATIONS)[number][0];
 
 export type SettingsMenuNodeLabel =
   /** A catalog key, translated at render. */
@@ -149,14 +149,24 @@ export function buildBranchRoot(
   };
 }
 
-function integrationNodes(workspaceId: string, integrationsHref: string): SettingsMenuNode[] {
-  return WORKSPACE_INTEGRATIONS.map(([slug, label]) => ({
-    key: `workspace:${workspaceId}:integrations:${slug}`,
-    href: `${integrationsHref}/${slug}`,
-    label: { text: label },
-    icon: INTEGRATION_ICONS[slug],
-    integrationSlug: slug,
-  }));
+function integrationNodes(
+  workspaceId: string,
+  integrationsHref: string,
+  visibleSlugs?: ReadonlySet<IntegrationSlug>,
+): SettingsMenuNode[] {
+  // Configured status gates the badge only, never the row itself — the branch
+  // always lists every integration regardless of credentials, so the filter
+  // here hides only disabled ones (intentionally looser than
+  // useNavAvailability's `configured && (!hideDisabled || enabled)`).
+  return WORKSPACE_INTEGRATIONS.filter(([slug]) => !visibleSlugs || visibleSlugs.has(slug)).map(
+    ([slug, label]) => ({
+      key: `workspace:${workspaceId}:integrations:${slug}`,
+      href: `${integrationsHref}/${slug}`,
+      label: { text: label },
+      icon: INTEGRATION_ICONS[slug],
+      integrationSlug: slug,
+    }),
+  );
 }
 
 /**
@@ -171,6 +181,12 @@ function integrationNodes(workspaceId: string, integrationsHref: string): Settin
 export function buildWorkspacesBranch(
   workspaces: ReadonlyArray<BranchWorkspace>,
   activeWorkspaceId?: string | null,
+  /**
+   * Which integrations the Integrations branch may list. Omitted — the default
+   * — lists all of them; a set is passed only while "Hide disabled integrations
+   * from left panel navigation" is on.
+   */
+  visibleIntegrationSlugs?: ReadonlySet<IntegrationSlug>,
 ): SettingsMenuNode[] {
   return workspaces.map((workspace) => {
     const integrationsHref = workspaceSettingsHref(workspace.id, "integrations");
@@ -193,7 +209,7 @@ export function buildWorkspacesBranch(
           icon,
           ...(tab === "integrations"
             ? {
-                children: integrationNodes(workspace.id, integrationsHref),
+                children: integrationNodes(workspace.id, integrationsHref, visibleIntegrationSlugs),
                 integrationsWorkspaceId: workspace.id,
               }
             : {}),

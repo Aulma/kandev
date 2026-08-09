@@ -1,9 +1,9 @@
-import type { Page } from "@playwright/test";
-
 import { test, expect } from "../../fixtures/test-base";
-
-const APPEARANCE_PATH = "/settings/preferences/appearance";
-const TAKEOVER = "app-sidebar-settings-mode";
+import {
+  SETTINGS_APPEARANCE_PATH as APPEARANCE_PATH,
+  SETTINGS_TAKEOVER_TESTID as TAKEOVER,
+  setSettingsMenuMode as setMenuMode,
+} from "../../helpers/settings-menu";
 
 // The settings menu shape is a per-device preference (localStorage), so these
 // specs assert against the sidebar and a reload rather than the API — there is
@@ -92,18 +92,3 @@ test.describe("Settings menu modes", () => {
     await expect(active).toHaveAccessibleName("GitHub");
   });
 });
-
-/**
- * Choose a mode through the real control, so the spec exercises the same
- * preview → save path a user does rather than seeding localStorage behind it.
- */
-async function setMenuMode(
-  testPage: Page,
-  mode: "flat" | "accordion" | "persistent",
-): Promise<void> {
-  await testPage.goto(APPEARANCE_PATH);
-  await testPage.getByTestId(`settings-menu-mode-${mode}`).click();
-  const floatingSave = testPage.getByTestId("settings-floating-save");
-  await floatingSave.getByRole("button", { name: "Save changes" }).click();
-  await expect(floatingSave).not.toBeVisible({ timeout: 15_000 });
-}
