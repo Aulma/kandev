@@ -330,7 +330,10 @@ test.describe("GitHub workspace settings", () => {
     await apiClient.mockGitHubReset();
     await apiClient.mockGitHubSetUser("test-user");
 
-    await testPage.goto("/settings/integrations/github");
+    // Pin the seed workspace in the URL: the install-level path redirects to
+    // the active workspace, which may be one another test created — the API
+    // assertions below read seedData.workspaceId.
+    await testPage.goto(`/settings/workspaces/${seedData.workspaceId}/integrations/github`);
     await expect(testPage.getByTestId("github-integration-heading")).toBeVisible();
 
     await testPage.getByTestId("github-scope-mode").click();
