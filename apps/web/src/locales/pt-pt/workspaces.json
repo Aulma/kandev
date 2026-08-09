@@ -76,6 +76,7 @@
   "invalidRepositoryPath": "Caminho de repositório inválido",
   "localPath": "Caminho local",
   "localPathNotSet": "Caminho local por definir",
+  "repositoriesReadOnlyImprove": "Os repositórios desta área de trabalho são geridos pelo Melhorar o Kandev e não podem ser alterados.",
   "manageWorkspaceDetails": "Faça a gestão dos detalhes da área de trabalho e salte para fluxos de trabalho ou repositórios.",
   "manageYourWorkspacesAndWorkflows": "Faça a gestão das suas áreas de trabalho e fluxos de trabalho",
   "manualPath": "Caminho manual",
