@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { WorkspaceRepositoriesClient } from "@/app/settings/workspace/workspace-repositories-client";
 import { WorkspaceWorkflowsClient } from "@/app/settings/workspace/workspace-workflows-client";
+import { IMPROVE_KANDEV_WORKSPACE_NAME } from "@/components/improve-kandev-dialog-model";
 import { fetchJson } from "@/lib/api/client";
 import { listWorkflows } from "@/lib/api/domains/kanban-api";
 import { listWorkflowTemplates } from "@/lib/api/domains/workflow-api";
@@ -55,7 +56,11 @@ export function WorkspaceRepositoriesRoute({ workspaceId }: { workspaceId: strin
 
   if (!state) return null;
   return (
-    <WorkspaceRepositoriesClient workspace={state.workspace} repositories={state.repositories} />
+    <WorkspaceRepositoriesClient
+      workspace={state.workspace}
+      repositories={state.repositories}
+      isImproveWorkspace={state.workspace?.name === IMPROVE_KANDEV_WORKSPACE_NAME}
+    />
   );
 }
 
@@ -83,6 +88,7 @@ export function WorkspaceWorkflowsRoute({ workspaceId }: { workspaceId: string }
       workspace={state.workspace}
       workflows={state.workflows}
       workflowTemplates={state.workflowTemplates}
+      isImproveWorkspace={state.workspace?.name === IMPROVE_KANDEV_WORKSPACE_NAME}
     />
   );
 }
