@@ -312,9 +312,10 @@ func TestUnarchiveCancelsAndJoinsClaimedArchiveCleanup(t *testing.T) {
 	ctx := context.Background()
 	coordinator := activity.NewCoordinator(activity.Options{})
 	taskSvc.SetTaskResourceCleanupActivityGate(coordinatorCleanupActivityGate{coordinator: coordinator})
-	task, err := taskSvc.CreateTask(ctx, &CreateTaskRequest{
+	taskResult, err := taskSvc.CreateTask(ctx, &CreateTaskRequest{
 		WorkspaceID: "ws-1", Title: "Archived task", ProjectID: "proj-1",
 	})
+	task := taskResult.Task
 	if err != nil {
 		t.Fatalf("CreateTask: %v", err)
 	}
@@ -411,9 +412,10 @@ func TestUnarchiveCancelsAndJoinsClaimedArchiveCleanup(t *testing.T) {
 func TestUnarchiveCancellationPreservesCleanupResourcesAfterBlockedCleaner(t *testing.T) {
 	taskSvc, repo := setupOfficeTest(t)
 	ctx := context.Background()
-	task, err := taskSvc.CreateTask(ctx, &CreateTaskRequest{
+	taskResult, err := taskSvc.CreateTask(ctx, &CreateTaskRequest{
 		WorkspaceID: "ws-1", Title: "Archived task", ProjectID: "proj-1",
 	})
+	task := taskResult.Task
 	if err != nil {
 		t.Fatalf("CreateTask: %v", err)
 	}
@@ -530,9 +532,10 @@ func TestPerformTaskCleanup_CancellationStopsBeforeWorktreeCleanup(t *testing.T)
 func TestUnarchiveTaskTreeCancelsPendingArchiveCleanup(t *testing.T) {
 	taskSvc, repo := setupOfficeTest(t)
 	ctx := context.Background()
-	task, err := taskSvc.CreateTask(ctx, &CreateTaskRequest{
+	taskResult, err := taskSvc.CreateTask(ctx, &CreateTaskRequest{
 		WorkspaceID: "ws-1", Title: "Archived task", ProjectID: "proj-1",
 	})
+	task := taskResult.Task
 	if err != nil {
 		t.Fatalf("CreateTask: %v", err)
 	}
@@ -666,9 +669,10 @@ func TestArchiveFailsBeforeMutationWhenCleanupIntentCannotPersist(t *testing.T) 
 func TestCascadeArchivePersistsCleanupBeforeTaskMutation(t *testing.T) {
 	taskSvc, repo := setupOfficeTest(t)
 	ctx := context.Background()
-	task, err := taskSvc.CreateTask(ctx, &CreateTaskRequest{
+	taskResult, err := taskSvc.CreateTask(ctx, &CreateTaskRequest{
 		WorkspaceID: "ws-1", Title: "Cascade archive", ProjectID: "proj-1",
 	})
+	task := taskResult.Task
 	if err != nil {
 		t.Fatalf("CreateTask: %v", err)
 	}
@@ -713,9 +717,10 @@ func TestWorkspaceDeletePersistsCleanupBeforeTaskCascade(t *testing.T) {
 func TestCascadeDeletePersistsCleanupBeforeTaskMutation(t *testing.T) {
 	taskSvc, repo := setupOfficeTest(t)
 	ctx := context.Background()
-	task, err := taskSvc.CreateTask(ctx, &CreateTaskRequest{
+	taskResult, err := taskSvc.CreateTask(ctx, &CreateTaskRequest{
 		WorkspaceID: "ws-1", Title: "Cascade delete", ProjectID: "proj-1",
 	})
+	task := taskResult.Task
 	if err != nil {
 		t.Fatalf("CreateTask: %v", err)
 	}
