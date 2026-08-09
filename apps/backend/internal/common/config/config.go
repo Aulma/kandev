@@ -133,8 +133,8 @@ type ServerConfig struct {
 	ReadTimeout    int      `mapstructure:"readTimeout"`  // in seconds
 	WriteTimeout   int      `mapstructure:"writeTimeout"` // in seconds
 	WebInternalURL string   `mapstructure:"webInternalUrl"`
-	// WebTitlePrefix prefixes the browser tab title as "<prefix> Kandev" so
-	// several Kandev instances (test, dev, prod) are distinguishable in
+	// WebTitlePrefix prefixes the browser tab title as "<prefix> Kandev" (for
+	// example "TEST") so several Kandev instances are distinguishable in
 	// adjacent browser tabs. Empty keeps the plain "Kandev" title.
 	WebTitlePrefix string `mapstructure:"webTitlePrefix"`
 }
