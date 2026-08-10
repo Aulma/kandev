@@ -78,7 +78,32 @@ type WorkspacePickerProps = {
   itemTestIdPrefix?: string;
   modal?: boolean;
   onActionComplete?: () => void;
+  /**
+   * Controlled open state. Omit for the default self-managed menu; the
+   * sidebar-header instance passes the store flag so the global
+   * WORKSPACE_PICKER shortcut can open it.
+   */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
+
+/**
+ * Open state that is self-managed by default and controlled when the caller
+ * passes `open`. `onOpenChange` fires in both modes, so a controlled owner sees
+ * every dismissal (item select, outside click, Escape).
+ */
+function useMenuOpenState(controlledOpen?: boolean, onOpenChange?: (open: boolean) => void) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const setOpen = useCallback(
+    (next: boolean) => {
+      if (!isControlled) setUncontrolledOpen(next);
+      onOpenChange?.(next);
+    },
+    [isControlled, onOpenChange],
+  );
+  return { open: isControlled ? controlledOpen : uncontrolledOpen, setOpen };
+}
 
 function workspaceType(workspace: WorkspaceItem | undefined): WorkspaceType {
   return workspace?.office_workflow_id ? "office" : "kanban";
@@ -215,6 +240,8 @@ export function AppSidebarWorkspacePicker({
   itemTestIdPrefix = "sidebar-workspace-item",
   modal = true,
   onActionComplete,
+  open: controlledOpen,
+  onOpenChange,
 }: WorkspacePickerProps = {}) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -222,7 +249,7 @@ export function AppSidebarWorkspacePicker({
   const workspaces = useAppStore((s) => s.workspaces);
   const setActiveWorkspace = useAppStore((s) => s.setActiveWorkspace);
   const resetKanbanWorkspaceContext = useAppStore((s) => s.resetKanbanWorkspaceContext);
-  const [open, setOpen] = useState(false);
+  const { open, setOpen } = useMenuOpenState(controlledOpen, onOpenChange);
 
   const activeWorkspace = workspaces.items.find((w) => w.id === workspaces.activeId);
   const activeId = activeWorkspace?.id ?? null;
@@ -266,6 +293,7 @@ export function AppSidebarWorkspacePicker({
       resetKanbanWorkspaceContext,
       officeEnabled,
       onActionComplete,
+      setOpen,
     ],
   );
   const handleNavigate = useCallback(
