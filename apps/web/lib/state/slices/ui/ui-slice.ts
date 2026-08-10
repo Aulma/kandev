@@ -138,6 +138,7 @@ export const defaultUIState: UISliceState = {
     width: APP_SIDEBAR_EXPANDED_WIDTH,
     settingsMode: false,
     improveDialogOpen: false,
+    workspacePickerOpen: false,
   },
   settingsMenu: {
     mode: DEFAULT_SETTINGS_MENU_MODE,

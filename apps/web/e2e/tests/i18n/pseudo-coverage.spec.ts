@@ -265,6 +265,7 @@ const SCREENS: Screen[] = [
       "Voice Input",
       "Reverse Chat Search",
       "Open Task Pull Request",
+      "Open Workspace Picker",
     ],
   },
   {
