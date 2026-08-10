@@ -305,10 +305,23 @@ describe("useAppShortcuts — workspace picker", () => {
     stubMatchMedia(false);
     renderHook(() => useAppShortcuts());
 
-    const event = pressWorkspacePicker("ctrlKey");
+    // Built inline rather than via pressWorkspacePicker so the spy is attached
+    // before dispatch: the contract is that the event is left entirely alone,
+    // so neither half of the handled-event pair may fire. Asserting only
+    // `defaultPrevented` would miss a stopPropagation moved above the guard,
+    // which would silently starve every other listener on the combo.
+    const event = new KeyboardEvent("keydown", {
+      key: "e",
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    const stopPropagation = vi.spyOn(event, "stopPropagation");
+    window.dispatchEvent(event);
 
     expect(mockSetWorkspacePickerOpen).not.toHaveBeenCalled();
     expect(event.defaultPrevented).toBe(false);
+    expect(stopPropagation).not.toHaveBeenCalled();
     expect(window.matchMedia).toHaveBeenCalledWith("(min-width: 768px)");
   });
 });

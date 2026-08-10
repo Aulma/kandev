@@ -91,6 +91,12 @@ type WorkspacePickerProps = {
  * Open state that is self-managed by default and controlled when the caller
  * passes `open`. `onOpenChange` fires in both modes, so a controlled owner sees
  * every dismissal (item select, outside click, Escape).
+ *
+ * A caller must pick one mode and keep it for the component's lifetime. Going
+ * from a defined `open` to `undefined` (or back) silently swaps which state
+ * wins and strands the other — the usual React controlled/uncontrolled
+ * anti-pattern. Both current callers are static: the sidebar header always
+ * passes the store flag, the mobile sheet never passes one.
  */
 function useMenuOpenState(controlledOpen?: boolean, onOpenChange?: (open: boolean) => void) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
