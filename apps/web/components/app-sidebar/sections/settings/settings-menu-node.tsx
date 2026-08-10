@@ -27,13 +27,6 @@ type SettingsMenuNodeRowProps = {
 };
 
 /**
- * One row of a settings menu branch, recursing into its children.
- *
- * A node with children renders as a disclosure; a node without renders as a
- * plain link. A node with neither children nor an `href` renders nothing at
- * all — it could not be navigated to or opened, so it would be a dead row.
- */
-/**
  * The row's leading visual: an agent's logo, the record dot, or nothing — in
  * which case `NavRowLabel` keeps the glyph box open. A node that already
  * declares an `icon` is left to it.
@@ -67,6 +60,13 @@ function withIntegrationProbe(node: SettingsMenuNode, rows: ReactNode) {
   );
 }
 
+/**
+ * One row of a settings menu branch, recursing into its children.
+ *
+ * A node with children renders as a disclosure; a node without renders as a
+ * plain link. A node with neither children nor an `href` renders nothing at
+ * all — it could not be navigated to or opened, so it would be a dead row.
+ */
 export function SettingsMenuNodeRow({
   node,
   depth,

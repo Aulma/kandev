@@ -87,6 +87,17 @@ describe("PageTopbar parent crumbs", () => {
     expect(overflow.closest("li")?.className).toContain("md:hidden");
   });
 
+  it("names the overflow trigger for assistive technology", () => {
+    // `BreadcrumbEllipsis` marks itself `aria-hidden`, so its own sr-only text
+    // never reaches the accessibility tree — the trigger has to be named here
+    // or it announces as a bare "button".
+    render(<PageTopbar title="Integrations" parents={parents} />);
+
+    expect(screen.getByRole("button", { name: "Show more breadcrumbs" })).toBe(
+      screen.getByTestId("topbar-crumb-overflow"),
+    );
+  });
+
   it("renders no overflow menu for a single parent", () => {
     render(<PageTopbar title="Workspaces" parents={[parents[0]]} />);
 

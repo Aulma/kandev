@@ -214,6 +214,7 @@ function ParentCrumbLabel({ crumb }: { crumb: ParentCrumb }) {
  * `🏠 › … › Kanban1 › Integrations`.
  */
 function ParentCrumbs({ parents }: { parents: ParentCrumb[] | undefined }) {
+  const { t } = useTranslation();
   if (!parents || parents.length === 0) return null;
   const collapsed = parents.slice(0, -1);
   const lastParent = parents[parents.length - 1];
@@ -232,10 +233,14 @@ function ParentCrumbs({ parents }: { parents: ParentCrumb[] | undefined }) {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="flex cursor-pointer items-center text-muted-foreground transition-colors hover:text-foreground"
+                  // `BreadcrumbEllipsis` is `aria-hidden`, which hides its own
+                  // sr-only text too, so the trigger needs a name of its own.
+                  // `-m-2 p-2` grows the touch target on this phone-only control
+                  // without moving the crumbs around it.
+                  aria-label={t("common:showMoreBreadcrumbs")}
+                  className="-m-2 flex cursor-pointer items-center p-2 text-muted-foreground transition-colors hover:text-foreground"
                   data-testid="topbar-crumb-overflow"
                 >
-                  {/* The sr-only "More" inside the ellipsis names the trigger. */}
                   <BreadcrumbEllipsis />
                 </button>
               </DropdownMenuTrigger>

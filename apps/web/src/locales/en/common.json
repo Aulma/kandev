@@ -375,6 +375,7 @@
   "showDiagram": "Show diagram",
   "showingRange_one": "Showing {{from}} to {{to}} of {{count}} result",
   "showingRange_other": "Showing {{from}} to {{to}} of {{count}} results",
+  "showMoreBreadcrumbs": "Show more breadcrumbs",
   "skip": "Skip",
   "stagesAndCommitsChangesUsingConventional": "Stages and commits changes using Conventional Commits.",
   "status": "Status",

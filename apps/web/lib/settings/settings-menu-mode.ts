@@ -49,9 +49,11 @@ export function writeSettingsMenuMode(mode: SettingsMenuMode): void {
  * Branch keys the persistent tree should reopen on this device.
  *
  * Keys are node identities, not routes, so a key naming a workspace, agent or
- * executor that has since been deleted simply never matches a rendered branch
- * — stale entries are inert rather than wrong, and get dropped the next time
- * the set is written.
+ * executor that has since been deleted simply never matches a rendered branch:
+ * stale entries are inert rather than wrong. They are also never pruned — the
+ * expansion set is only ever added to or narrowed by an explicit collapse, and
+ * nothing here knows which records still exist — so the stored list grows by
+ * one string per deleted record and is cleared only by "Collapse all".
  */
 export function readSettingsMenuExpandedKeys(): string[] {
   const stored = getLocalStorage<string[]>(STORAGE_KEYS.SETTINGS_MENU_EXPANDED, []) as unknown;

@@ -63,10 +63,12 @@ export function AgentProfilesSubList({
           </Link>
         </Button>
       </div>
-      {profiles.length > 0 && (
+      {/* Narrowed on `savedAgent` rather than on `profiles.length`: the rows
+          need the agent itself, and only this check proves it is there. */}
+      {savedAgent && savedAgent.profiles.length > 0 && (
         <div className="grid gap-2">
-          {profiles.map((profile) => (
-            <ProfileRow key={profile.id} agent={savedAgent as Agent} profile={profile} />
+          {savedAgent.profiles.map((profile) => (
+            <ProfileRow key={profile.id} agent={savedAgent} profile={profile} />
           ))}
         </div>
       )}
