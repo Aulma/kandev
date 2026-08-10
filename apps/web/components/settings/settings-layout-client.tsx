@@ -102,37 +102,48 @@ function SettingsShell({
 }) {
   const pathname = usePathname();
   // A settings form floats its Save action above the fold and needs room to
-  // scroll clear of it. The index floats only the search field, which is a
-  // third of that — the same padding there is dead scroll below the last row.
+  // scroll clear of it. #2466 moved that action from the viewport to this
+  // column (`placement="content"`), which brought it closer to the bottom and
+  // so shrank the reservation. The index floats only the search field, a third
+  // of the height, and the form's padding there is dead scroll below the last
+  // row.
   const contentBottomPadding =
     pathname === "/settings"
       ? "pb-[calc(5.25rem_+_env(safe-area-inset-bottom)_+_var(--app-status-bar-height))]"
-      : "pb-[calc(11rem_+_env(safe-area-inset-bottom)_+_var(--app-status-bar-height))]";
+      : "pb-[calc(8rem_+_env(safe-area-inset-bottom)_+_var(--app-status-bar-height))] md:pb-[calc(5.5rem_+_env(safe-area-inset-bottom)_+_var(--app-status-bar-height))]";
 
   return (
     <TooltipProvider>
-      <SettingsSaveProvider key={pathname}>
-        <SettingsTargetProvider>
-          <PageShell
-            title={title}
-            backHref={backHref}
-            backLabel={backLabel}
-            parents={parents}
-            showStatusTrigger={false}
-            className="h-10"
-            actions={showIntegrationCopyAction ? <IntegrationCopyConfigAction /> : undefined}
-            // No hamburger inside Settings: `/settings` renders the menu as a
-            // page on a phone, reached through the breadcrumb's Settings crumb
-            // (a link only below md — on desktop the sidebar menu is always
-            // visible, so the crumb is static text). The home crumb leaves.
-            showNavTrigger={false}
-            contentTestId="settings-scroll-container"
-            contentClassName={`flex flex-col gap-4 overscroll-contain p-4 ${contentBottomPadding}`}
-          >
-            {children}
-          </PageShell>
-        </SettingsTargetProvider>
-      </SettingsSaveProvider>
+      {/* The positioning ancestor `placement="content"` resolves against: it
+          wraps the topbar and the scroll container, so the floating Save bar
+          centres on the settings column rather than on the viewport (which
+          would sit it under the sidebar). Upstream used the `<main>` this
+          shell used to own; `PageShell` renders no landmark of its own, since
+          `AppShell` already owns the page's one `<main>`. */}
+      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+        <SettingsSaveProvider key={pathname} placement="content">
+          <SettingsTargetProvider>
+            <PageShell
+              title={title}
+              backHref={backHref}
+              backLabel={backLabel}
+              parents={parents}
+              showStatusTrigger={false}
+              className="h-10"
+              actions={showIntegrationCopyAction ? <IntegrationCopyConfigAction /> : undefined}
+              // No hamburger inside Settings: `/settings` renders the menu as a
+              // page on a phone, reached through the breadcrumb's Settings crumb
+              // (a link only below md — on desktop the sidebar menu is always
+              // visible, so the crumb is static text). The home crumb leaves.
+              showNavTrigger={false}
+              contentTestId="settings-scroll-container"
+              contentClassName={`flex flex-col gap-4 overscroll-contain p-4 ${contentBottomPadding}`}
+            >
+              {children}
+            </PageShell>
+          </SettingsTargetProvider>
+        </SettingsSaveProvider>
+      </div>
     </TooltipProvider>
   );
 }

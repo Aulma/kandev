@@ -152,7 +152,7 @@ export function WorkspaceSectionStats({
                   (count === 0 || count === undefined) && "text-muted-foreground/50",
                 )}
               >
-                {count ?? "—"}
+                {count ?? "-"}
               </span>
               <IconChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
             </div>

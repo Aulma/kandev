@@ -1,6 +1,5 @@
 "use client";
-import { type ReactNode, type RefObject, useRef } from "react";
-import { useRouter } from "@/lib/routing/client-router";
+import { type ReactNode, type RefObject } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@kandev/ui/sheet";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@kandev/ui/drawer";
 import { Checkbox } from "@kandev/ui/checkbox";
@@ -18,14 +17,13 @@ import {
   MobileTasksListOptions,
   type TasksListDisplayOptions,
 } from "./mobile-menu-task-list-options";
-import { useKanbanDisplaySettings } from "@/hooks/use-kanban-display-settings";
-import { linkToTaskOverview, linkToTasks } from "@/lib/links";
 import { cn } from "@/lib/utils";
 import type { Repository } from "@/lib/types/http";
 import type { WorkflowsState } from "@/lib/state/slices";
-import { useResponsiveBreakpoint } from "@/hooks/use-responsive-breakpoint";
 import { useTranslation } from "react-i18next";
 import { getRepositoryPlaceholderKey } from "@/lib/kanban/repository-placeholder";
+import { useMobileMenuSheetState } from "@/hooks/use-mobile-menu-sheet-state";
+import { ColumnsMenu, type ColumnsMenuStep } from "./columns-menu";
 import {
   mobileControlClass,
   mobileControlIconClass,
@@ -34,7 +32,7 @@ import {
   mobileSectionClass,
   mobileSectionTitleClass,
 } from "./mobile-menu-styles";
-type MobileMenuSheetProps = {
+export type MobileMenuSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   workspaceId?: string;
@@ -45,7 +43,7 @@ type MobileMenuSheetProps = {
   tasksListOptions?: TasksListDisplayOptions;
 };
 
-type MobileDisplayOptionsProps = {
+export type MobileDisplayOptionsProps = {
   activeWorkflowId: string | null;
   workflows: WorkflowsState["items"];
   onWorkflowChange: (id: string | null) => void;
@@ -60,6 +58,19 @@ type MobileDisplayOptionsProps = {
   showTaskDetails: boolean;
   showWorkflow: boolean;
   tasksListOptions?: TasksListDisplayOptions;
+  /**
+   * Column visibility for the workflow the phone board is focused on. Null off
+   * the phone kanban, where the lane header owns the control instead.
+   */
+  columnsSection: MobileColumnsSection | null;
+};
+
+export type MobileColumnsSection = {
+  workflowId: string;
+  workflowName: string;
+  steps: ColumnsMenuStep[];
+  hiddenStepIds: string[];
+  onToggle: (workflowId: string, stepId: string) => void;
 };
 
 function MobileDisplaySelects({
@@ -79,6 +90,7 @@ function MobileDisplaySelects({
   | "onToggleTasksListShowDetails"
   | "showTaskDetails"
   | "tasksListOptions"
+  | "columnsSection"
 >) {
   const { t } = useTranslation();
   return (
@@ -142,12 +154,19 @@ function MobileDisplayOptions(props: MobileDisplayOptionsProps) {
     onToggleTasksListShowDetails,
     showTaskDetails,
     tasksListOptions,
+    columnsSection,
     ...selectProps
   } = props;
   return (
     <div className="space-y-4">
       <label className={mobileSectionTitleClass}>{t("kanban:displayOptions")}</label>
       <MobileDisplaySelects {...selectProps} />
+      {columnsSection && (
+        <div className={mobileFieldClass}>
+          <label className={mobileFieldLabelClass}>{t("kanban:columns")}</label>
+          <ColumnsMenu {...columnsSection} touchTargets />
+        </div>
+      )}
       <div className={mobileFieldClass}>
         <label className={mobileFieldLabelClass}>{t("kanban:previewPanel")}</label>
         <label className="flex h-10 cursor-pointer items-center gap-3 rounded-md px-0 text-sm font-medium">
@@ -387,66 +406,9 @@ export function MobileMenuSheet({
   isSearchLoading = false,
   tasksListOptions,
 }: MobileMenuSheetProps) {
-  const contentRef = useRef<HTMLDivElement | null>(null);
-  const router = useRouter();
   const navControls = useAppNavDialogs(() => onOpenChange(false));
-  const { isMobile } = useResponsiveBreakpoint();
-  const {
-    workflows,
-    activeWorkflowId,
-    repositories,
-    repositoriesLoading,
-    allRepositoriesSelected,
-    selectedRepositoryId,
-    enablePreviewOnClick,
-    tasksListShowDetails,
-    onWorkflowChange,
-    onRepositoryChange,
-    onTogglePreviewOnClick,
-    onToggleTasksListShowDetails,
-    effectiveTaskListingView,
-    onViewModeChange,
-  } = useKanbanDisplaySettings();
-  const repositoryValue = allRepositoriesSelected ? "all" : (selectedRepositoryId ?? "all");
-  const viewValue = currentPage === "tasks" ? "list" : effectiveTaskListingView;
-  const handleViewChange = (value: string) => {
-    if (!value) return;
-    if (value === "list") {
-      onViewModeChange("list");
-      if (currentPage !== "tasks") router.push(linkToTasks(workspaceId));
-      onOpenChange(false);
-    } else if (value === "kanban") {
-      onViewModeChange("kanban");
-      if (currentPage !== "kanban")
-        router.push(linkToTaskOverview({ workspaceId, workflowId: activeWorkflowId ?? undefined }));
-      onOpenChange(false);
-    } else if (value === "pipeline" && !isMobile) {
-      onViewModeChange("pipeline");
-      if (currentPage !== "kanban")
-        router.push(linkToTaskOverview({ workspaceId, workflowId: activeWorkflowId ?? undefined }));
-      onOpenChange(false);
-    }
-  };
-  const displayOptions = {
-    activeWorkflowId,
-    workflows,
-    onWorkflowChange,
-    repositoryValue,
-    repositories,
-    repositoriesLoading,
-    onRepositoryChange,
-    enablePreviewOnClick,
-    onTogglePreviewOnClick,
-    tasksListShowDetails,
-    onToggleTasksListShowDetails,
-    showTaskDetails: currentPage === "tasks",
-    showWorkflow: !isMobile || currentPage !== "kanban",
-    tasksListOptions: isMobile && currentPage === "tasks" ? tasksListOptions : undefined,
-  };
-  const focusMenu = (event: Event) => {
-    event.preventDefault();
-    contentRef.current?.focus({ preventScroll: true });
-  };
+  const { contentRef, isMobile, viewValue, handleViewChange, displayOptions, focusMenu } =
+    useMobileMenuSheetState({ open, onOpenChange, workspaceId, currentPage, tasksListOptions });
 
   return (
     <MobileMenuRender

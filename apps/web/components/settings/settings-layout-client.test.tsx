@@ -169,6 +169,7 @@ describe("SettingsLayoutClient integrations actions", () => {
     );
 
     expect(await screen.findByTestId("settings-floating-save")).toBeTruthy();
+    expect(screen.getByTestId("settings-floating-save").className).toContain("absolute");
     expect(screen.getByTestId("settings-scroll-container").className).toContain(
       "safe-area-inset-bottom",
     );

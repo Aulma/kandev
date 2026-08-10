@@ -35,7 +35,7 @@ test.describe("hide disabled integrations from left panel navigation", () => {
     // Leave Settings — the sidebar's Integrations section only renders
     // outside the Settings takeover.
     await testPage.goto("/tasks");
-    const githubNavLink = testPage.getByRole("link", { name: "GitHub" });
+    const githubNavLink = testPage.getByRole("link", { name: "GitHub", exact: true });
     await expect(githubNavLink).toBeVisible({ timeout: 10_000 });
 
     // The Settings left panel's per-workspace Integrations tree is also part
@@ -71,7 +71,7 @@ test.describe("hide disabled integrations from left panel navigation", () => {
     await expect(testPage.getByTestId("settings-floating-save")).not.toBeVisible();
 
     await testPage.goto("/tasks");
-    await expect(testPage.getByRole("link", { name: "GitHub" })).not.toBeVisible();
+    await expect(testPage.getByRole("link", { name: "GitHub", exact: true })).not.toBeVisible();
 
     // The Settings left-panel Integrations tree hides it as well.
     await testPage.goto(integrationsPath);
@@ -89,6 +89,8 @@ test.describe("hide disabled integrations from left panel navigation", () => {
     await expect(testPage.getByTestId("settings-floating-save")).not.toBeVisible();
 
     await testPage.goto("/tasks");
-    await expect(testPage.getByRole("link", { name: "GitHub" })).toBeVisible({ timeout: 10_000 });
+    await expect(testPage.getByRole("link", { name: "GitHub", exact: true })).toBeVisible({
+      timeout: 10_000,
+    });
   });
 });
