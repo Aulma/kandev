@@ -7,7 +7,12 @@ const mocks = vi.hoisted(() => ({
   routerPush: vi.fn(),
   openStatusDrawer: vi.fn(),
   openHealthDialog: vi.fn(),
+  setTheme: vi.fn(),
 }));
+
+let resolvedTheme: "light" | "dark" = "light";
+const THEME_TOGGLE_TEST_ID = "mobile-theme-toggle-button";
+const ARIA_LABEL = "aria-label";
 
 const state = {
   workspaces: { activeId: "ws-1" as string | null },
@@ -71,6 +76,10 @@ vi.mock("@/components/system-health/health-indicator", () => ({
   HealthIssuesDialog: () => <div data-testid="health-dialog" />,
 }));
 
+vi.mock("@/components/theme/app-theme", () => ({
+  useTheme: () => ({ resolvedTheme, setTheme: mocks.setTheme }),
+}));
+
 type SectionsProps = Parameters<typeof AppNavSections>[0];
 
 function SectionsHost({
@@ -97,6 +106,7 @@ function SectionsHost({
 describe("AppNavSheet", () => {
   beforeEach(() => {
     healthHasIssues = false;
+    resolvedTheme = "light";
     vi.clearAllMocks();
   });
   afterEach(cleanup);
@@ -160,7 +170,7 @@ describe("AppNavSections", () => {
     // A bare aria-label of the connection sentence would replace the visible
     // "Status" and break label-in-name for voice control.
     const status = screen.getByTestId("mobile-home-status-button");
-    const name = status.getAttribute("aria-label") ?? "";
+    const name = status.getAttribute(ARIA_LABEL) ?? "";
     expect(name).toContain("Status");
     expect(name).toContain(description);
     expect(screen.getByRole("button", { name: /Status/ })).toBe(status);
@@ -170,7 +180,7 @@ describe("AppNavSections", () => {
     render(<SectionsHost />);
 
     const status = screen.getByTestId("mobile-home-status-button");
-    expect(status.getAttribute("aria-label")).toBeNull();
+    expect(status.getAttribute(ARIA_LABEL)).toBeNull();
     expect(status.textContent).toContain("Status");
   });
 
@@ -193,5 +203,40 @@ describe("AppNavSections", () => {
     render(<SectionsHost />);
 
     expect(screen.getByTestId("app-nav-health-button")).not.toBeNull();
+  });
+});
+
+describe("AppNavSections theme toggle", () => {
+  beforeEach(() => {
+    healthHasIssues = false;
+    resolvedTheme = "light";
+    vi.clearAllMocks();
+  });
+  afterEach(cleanup);
+
+  // #2514 shipped this on the kanban drawer's own utility rows. That surface
+  // draws the shared block now, so the row has to live here or the feature
+  // disappears from every mobile menu.
+  it("switches to dark from a light theme", () => {
+    render(<SectionsHost />);
+
+    const toggle = screen.getByTestId(THEME_TOGGLE_TEST_ID);
+    expect(toggle.getAttribute(ARIA_LABEL)).toBe("Switch to Dark Mode");
+    expect(toggle.getAttribute("aria-pressed")).toBe("false");
+
+    fireEvent.click(toggle);
+    expect(mocks.setTheme).toHaveBeenCalledWith("dark");
+  });
+
+  it("switches back to light from a dark theme", () => {
+    resolvedTheme = "dark";
+    render(<SectionsHost />);
+
+    const toggle = screen.getByTestId(THEME_TOGGLE_TEST_ID);
+    expect(toggle.getAttribute(ARIA_LABEL)).toBe("Switch to Light Mode");
+    expect(toggle.getAttribute("aria-pressed")).toBe("true");
+
+    fireEvent.click(toggle);
+    expect(mocks.setTheme).toHaveBeenCalledWith("light");
   });
 });

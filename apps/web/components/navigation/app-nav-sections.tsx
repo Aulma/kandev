@@ -2,7 +2,13 @@
 
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { IconActivity, IconAlertTriangle, IconStethoscope } from "@tabler/icons-react";
+import {
+  IconActivity,
+  IconAlertTriangle,
+  IconMoon,
+  IconStethoscope,
+  IconSun,
+} from "@tabler/icons-react";
 import { Button } from "@kandev/ui/button";
 import { useAppStatusDrawer } from "@/components/app-status-bar/app-status-surface-provider";
 import { useConnectionIssueCopy } from "@/components/app-status-bar/connection-status-item";
@@ -11,6 +17,8 @@ import { MobileIntegrationsSection } from "@/components/integrations/integration
 import { DestinationRows } from "@/components/navigation/destination-rows";
 import { MobilePluginNavSection } from "@/components/plugins/mobile-plugin-nav-section";
 import { useSystemHealthIndicator } from "@/hooks/use-system-health-indicator";
+import { useTheme } from "@/components/theme/app-theme";
+import { getThemeToggleLabelKey, getThemeToggleTarget } from "@/components/theme/theme-toggle";
 import { HealthIssuesDialog } from "@/components/system-health/health-indicator";
 import { useAppStore } from "@/components/state-provider";
 import { useStaticDestinations } from "@/hooks/use-app-destinations";
@@ -150,6 +158,7 @@ function UtilityNavSection({
 }) {
   const { t } = useTranslation();
   const destinations = useStaticDestinations("mobileMenu", MOBILE_MENU_UTILITY_SECTIONS);
+  const { resolvedTheme, setTheme } = useTheme();
   const utilityRowClass = "h-11 w-full cursor-pointer justify-start gap-3 px-3 text-sm";
   return (
     <div className="mt-auto flex flex-col gap-3 border-t border-border pt-4">
@@ -160,6 +169,25 @@ function UtilityNavSection({
         onNavigate={onNavigate}
         className="gap-3 px-3 text-sm"
       />
+      {/* #2514 put this on the kanban drawer's own utility rows; that surface
+          now draws this shared block instead, so the toggle lives here and
+          every mobile menu gets it rather than only the board's. */}
+      <Button
+        type="button"
+        variant="outline"
+        className={utilityRowClass}
+        onClick={() => setTheme(getThemeToggleTarget(resolvedTheme))}
+        data-testid="mobile-theme-toggle-button"
+        aria-label={t(getThemeToggleLabelKey(resolvedTheme))}
+        aria-pressed={resolvedTheme === "dark"}
+      >
+        {resolvedTheme === "dark" ? (
+          <IconSun className="h-4 w-4 shrink-0" />
+        ) : (
+          <IconMoon className="h-4 w-4 shrink-0" />
+        )}
+        {t("sidebar:toggleTheme")}
+      </Button>
       <Button
         type="button"
         variant="outline"
