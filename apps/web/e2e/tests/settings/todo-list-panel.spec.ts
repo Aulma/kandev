@@ -168,7 +168,7 @@ test.describe("Todo list panel preference", () => {
     // Toggle the preference from a second tab; `testPage` never navigates
     // away from the task — proves the change is live, not reload-dependent.
     const settingsPage = await testPage.context().newPage();
-    await settingsPage.goto("/settings/general/task-actions");
+    await settingsPage.goto("/settings/preferences/task-behavior");
     const toggle = settingsPage.getByRole("switch", { name: "Show agent todo list panel" });
     await expect(toggle).toHaveAttribute("aria-checked", "false");
     await toggle.click();
@@ -254,6 +254,45 @@ test.describe("Todo list panel preference", () => {
     await expect(panel.getByText("Write tests")).toBeVisible();
     await expect(panel.getByText("Implement feature")).toBeVisible();
     await expect(panel.getByText("1/2 completed")).toBeVisible();
+  });
+
+  test("checklist fills the height of its hosting panel instead of the popover cap", async ({
+    testPage,
+    apiClient,
+    seedData,
+  }) => {
+    test.setTimeout(120_000);
+    // Deterministic viewport so the geometry assertions below are stable.
+    await testPage.setViewportSize({ width: 1440, height: 900 });
+    const task = await createTaskWithTodos(apiClient, seedData, "Todos fills panel height");
+    await setTodoListPanelPreference(apiClient, true);
+    await openTask(testPage, task.id);
+
+    await expect(todosTabWrapper(testPage)).toBeVisible({ timeout: 15_000 });
+    await todosTabWrapper(testPage).click();
+    const panel = testPage.getByTestId("todos-panel");
+    await expect(panel).toBeVisible({ timeout: 15_000 });
+
+    // The panel root must stretch to its layout parent, the portal slot
+    // (`h-full w-full overflow-hidden`). `xpath=../..` skips the
+    // `display: contents` portal element, which carries no box of its own.
+    const slot = panel.locator("xpath=../..");
+    const [panelBox, slotBox] = await Promise.all([panel.boundingBox(), slot.boundingBox()]);
+    expect(slotBox).not.toBeNull();
+    expect(Math.abs((panelBox?.height ?? 0) - (slotBox?.height ?? 0))).toBeLessThanOrEqual(4);
+
+    // The checklist scroll container is no longer a fixed-size popover list:
+    // its bottom edge must track the panel's bottom content edge (only the
+    // p-3 padding remains below). A capped 192px (max-h-48) list can never
+    // reach the bottom of a taller hosting panel, so this measured invariant
+    // is layout-independent — it holds in short split groups and any
+    // viewport, with no arbitrary pixel allowance. Two-sided (Math.abs) so
+    // content spilling below the panel also fails the guard (round 5).
+    const listBox = await panel.locator(".overflow-y-auto").boundingBox();
+    expect(listBox).not.toBeNull();
+    const panelBottom = (panelBox?.y ?? 0) + (panelBox?.height ?? 0);
+    const listBottom = (listBox?.y ?? 0) + listBox!.height;
+    expect(Math.abs(panelBottom - listBottom)).toBeLessThanOrEqual(24);
   });
 
   test("is manually addable from the task workbench's own + menu, independent of the preference", async ({
