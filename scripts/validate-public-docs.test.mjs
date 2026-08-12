@@ -214,6 +214,18 @@ test("accepts explicitly ordered pages with required frontmatter", async () => {
   await assert.doesNotReject(validatePublicDocs(dir));
 });
 
+test("rejects public pages that contain an em dash", async () => {
+  const dir = await createDocs(
+    { "index.md": validPage.replace("Page body.", "Public — copy.") },
+    { pages: ["index"] },
+  );
+
+  await assert.rejects(
+    validatePublicDocs(dir),
+    /public docs contain em dash \(U\+2014\): index\.md:8/,
+  );
+});
+
 test("rejects published pages omitted from meta.json", async () => {
   const dir = await createDocs(
     { "index.md": validPage, "cli.md": validPage },
