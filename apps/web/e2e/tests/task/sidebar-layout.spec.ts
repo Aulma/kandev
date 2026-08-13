@@ -342,13 +342,16 @@ test.describe("Sidebar layout — task timestamps and sorting", () => {
       workflow_step_id: seedData.startStepId,
       repository_ids: [seedData.repositoryId],
     });
-    // Small delay so timestamps differ
+    // deliberate-sleep(clock-separation): this test asserts sidebar ordering by
+    // creation time, so consecutive creations need distinguishable `created_at`
+    // values. The thing being waited for is the clock, not an app event.
     await new Promise((r) => setTimeout(r, 50));
     await apiClient.createTask(seedData.workspaceId, "Sort Task Middle", {
       workflow_id: seedData.workflowId,
       workflow_step_id: seedData.startStepId,
       repository_ids: [seedData.repositoryId],
     });
+    // deliberate-sleep(clock-separation): same reason as above.
     await new Promise((r) => setTimeout(r, 50));
     await apiClient.createTask(seedData.workspaceId, "Sort Task Newest", {
       workflow_id: seedData.workflowId,
