@@ -43,6 +43,7 @@ Product-wide capabilities that are not tied to a single feature area.
 | [setup-launch-timeout](platform/setup-launch-timeout.md) | approved |
 | [task-sleep-inhibition](platform/task-sleep-inhibition.md) | building |
 | [i18n](platform/i18n.md) | building |
+| [traditional-chinese-locales](platform/traditional-chinese-locales.md) | building |
 | [mid-turn-steering](platform/mid-turn-steering.md) | shipped |
 | [plugins](plugins/spec.md) | draft |
 | [plugins — authoring experience](plugins/authoring-experience.md) | draft |
