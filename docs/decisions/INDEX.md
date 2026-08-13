@@ -160,4 +160,5 @@ Read individual ADRs for full context. Create new ones via `/record decision` or
 | 2026-08-11-user-owned-status-bar-visibility | [Make Status Bar Visibility a Portable User Preference](2026-08-11-user-owned-status-bar-visibility.md) | accepted | backend, frontend, protocol | 2026-08-11 |
 | 2026-08-12-built-in-utility-default-inheritance | [Built-in Utility Actions Inherit the Global Profile by Default](2026-08-12-built-in-utility-default-inheritance.md) | superseded by 2026-08-12-empty-utility-bindings-inherit-default | backend, frontend | 2026-08-12 |
 | 2026-08-12-empty-utility-bindings-inherit-default | [Empty Built-in Utility Bindings Inherit the Default](2026-08-12-empty-utility-bindings-inherit-default.md) | accepted | backend, frontend | 2026-08-12 |
+| 2026-08-12-setup-timeout-owns-launch-budget | [One Setup Timeout Owns Launch Budgets](2026-08-12-setup-timeout-owns-launch-budget.md) | accepted | backend | 2026-08-12 |
 | 2026-08-10-no-em-dash-public-copy | [Keep Em Dashes Out of Public Copy](2026-08-10-no-em-dash-public-copy.md) | accepted | frontend, infra | 2026-08-10 |

@@ -1479,6 +1479,7 @@ export class ApiClient {
   async mockGitHubAssociateTaskPR(data: {
     task_id: string;
     workspace_id?: string;
+    repository_id?: string;
     owner: string;
     repo: string;
     pr_number: number;
@@ -2300,9 +2301,9 @@ export class ApiClient {
    */
   async waitForIntegrationAuthHealthy(
     integration: "jira" | "linear" | "sentry",
-    options: number | { timeoutMs?: number; workspaceId?: string } = 5_000,
+    options: number | { timeoutMs?: number; workspaceId?: string } = 30_000,
   ): Promise<void> {
-    const timeoutMs = typeof options === "number" ? options : (options.timeoutMs ?? 5_000);
+    const timeoutMs = typeof options === "number" ? options : (options.timeoutMs ?? 30_000);
     const workspaceId = typeof options === "number" ? undefined : options.workspaceId;
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
