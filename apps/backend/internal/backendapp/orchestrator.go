@@ -97,13 +97,17 @@ func provideOrchestrator(
 	if err != nil {
 		return nil, nil, fmt.Errorf("init message queue repo: %w", err)
 	}
-	maxPerSession := resolveQueueMaxPerSession(pool, log)
-	mergeEnabled := resolveQueueMergeEnabled(pool, log)
+	queueSettings := resolveQueueSettings(pool, log).Effective
+	maxPerSession := queueSettings.MaxPerSession
+	mergeEnabled := queueSettings.MergeEnabled
+	autoMergeEnabled := queueSettings.AutoMergeEnabled
 	msgQueue := messagequeue.NewService(queueRepo, maxPerSession, log)
 	msgQueue.SetMergeEnabled(mergeEnabled)
+	msgQueue.SetAutoMergeEnabled(autoMergeEnabled)
 	log.Info("Message queue initialized",
 		zap.Int("max_per_session", maxPerSession),
-		zap.Bool("merge_enabled", mergeEnabled))
+		zap.Bool("merge_enabled", mergeEnabled),
+		zap.Bool("auto_merge_enabled", autoMergeEnabled))
 	if taskSvc.AttachmentService() == nil && taskSvc.AttachmentRepository() != nil {
 		attachmentSvc, attachmentErr := taskservice.NewAttachmentService(
 			taskSvc.AttachmentRepository(), cfg.ResolvedHomeDir(), taskSvc.AuthorizeWorkspaceAccess, log,
@@ -276,6 +280,12 @@ func resolveQueueMergeEnabled(pool *db.Pool, log *logger.Logger) bool {
 	return resolveQueueSettings(pool, log).Effective.MergeEnabled
 }
 
+// resolveQueueAutoMergeEnabled honors the persisted automatic merge setting,
+// defaulting to enabled when unset or invalid.
+func resolveQueueAutoMergeEnabled(pool *db.Pool, log *logger.Logger) bool {
+	return resolveQueueSettings(pool, log).Effective.AutoMergeEnabled
+}
+
 // resolveQueueSettings loads the persisted message queue settings — falling
 // back to defaults when unset, invalid, or the store is unavailable — and
 // resolves them against the KANDEV_QUEUE_MAX_PER_SESSION environment
@@ -300,8 +310,9 @@ func resolveQueueSettings(pool *db.Pool, log *logger.Logger) queuesettings.Resol
 		return queuesettings.Resolution{Response: queuesettings.Response{
 			Settings: queuesettings.DefaultSettings(),
 			Effective: queuesettings.Effective{
-				MaxPerSession: messagequeue.DefaultMaxPerSession,
-				MergeEnabled:  true,
+				MaxPerSession:    messagequeue.DefaultMaxPerSession,
+				MergeEnabled:     true,
+				AutoMergeEnabled: true,
 			},
 		}}
 	}
