@@ -223,9 +223,12 @@
   "watcherKindGithubReview": "GitHub PR 审查",
   "watcherKindJira": "Jira",
   "watcherKindLinear": "Linear",
+  "collapseAgentProfiles": "折叠 {{name}} 配置",
+  "expandAgentProfiles": "展开 {{name}} 配置",
   "duplicate": "复制",
   "duplicateProfileNamed": "复制 {{name}}",
   "duplicateProfileSuccess": "智能体配置已复制",
   "duplicateSaveBlocked": "设置仍在保存，请稍后重试。",
-  "failedToDuplicateProfile": "复制智能体配置失败"
+  "failedToDuplicateProfile": "复制智能体配置失败",
+  "noProfilesYetShort": "暂无配置"
 }
