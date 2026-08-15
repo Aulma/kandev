@@ -2,14 +2,7 @@
 
 import { useTranslation } from "react-i18next";
 import { useRouter, usePathname } from "@/lib/routing/client-router";
-import {
-  IconBuildings,
-  IconLayoutKanban,
-  IconSettings,
-  IconSparkles,
-  IconStethoscope,
-  IconWifiOff,
-} from "@tabler/icons-react";
+import { IconSettings, IconSparkles, IconStethoscope, IconWifiOff } from "@tabler/icons-react";
 import { useStaticDestinations } from "@/hooks/use-app-destinations";
 import type { DestinationIcon } from "@/lib/navigation/types";
 import { Button } from "@kandev/ui/button";
@@ -17,19 +10,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@kandev/ui/tooltip";
 import { ImproveKandevDialog } from "@/components/improve-kandev-dialog";
 import { ReleaseNotesDialog } from "@/components/release-notes/release-notes-dialog";
 import { useAppStore } from "@/components/state-provider";
-import { useFeature } from "@/hooks/domains/features/use-feature";
 import { useReleaseNotes } from "@/hooks/use-release-notes";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { CurrentUserChip } from "./current-user-chip";
 import { linkToTask } from "@/lib/links";
 import { cn } from "@/lib/utils";
-import { isOfficeWorkspace } from "@/lib/state/slices/workspace/selectors";
-import { useSelectWorkspace } from "@/hooks/use-select-workspace";
-import {
-  resolveLastOfficeWorkspace,
-  resolveLastKanbanWorkspace,
-  workspaceHomeHref,
-} from "./app-sidebar-workspace-navigation";
+import { workspaceHomeHref } from "./app-sidebar-workspace-navigation";
 import { isSettingsRoute } from "./app-sidebar-route";
 import { useConnectionIssueCopy } from "../app-status-bar/connection-status-item";
 import type { ConnectionIssueSeverity } from "@/lib/types/connection";
@@ -253,14 +239,8 @@ export function AppSidebarFooter({ collapsed, onToggleSettingsMode }: AppSidebar
   const workspaces = useAppStore((s) => s.workspaces);
   const workspaceId = workspaces.activeId;
   const activeWorkspace = workspaces.items.find((workspace) => workspace.id === workspaceId);
-  const activeIsOffice = isOfficeWorkspace(activeWorkspace);
-  const targetWorkspace = activeIsOffice
-    ? resolveLastKanbanWorkspace(workspaces.items)
-    : resolveLastOfficeWorkspace(workspaces.items);
-  const selectWorkspace = useSelectWorkspace();
   const settingsMode = useAppStore((s) => s.appSidebar.settingsMode);
   const toggleSettings = useSettingsGearToggle(settingsMode, activeWorkspace, onToggleSettingsMode);
-  const officeEnabled = useFeature("office");
   const appStatusBarEnabled = useAppStore((s) => s.userSettings.appStatusBarEnabled);
   const insightDestinations = useStaticDestinations("sidebar", "insights");
   const releaseNotes = useReleaseNotes();
@@ -305,29 +285,6 @@ export function AppSidebarFooter({ collapsed, onToggleSettingsMode }: AppSidebar
           onClick={releaseNotes.openDialog}
           badge={releaseNotes.hasUnseen}
           testId="sidebar-release-notes-button"
-        />
-      )}
-      {officeEnabled && (
-        <FooterIconButton
-          icon={activeIsOffice ? IconLayoutKanban : IconBuildings}
-          // Names the workspace, not the mode. Chrome follows the active
-          // workspace, so this button switches workspace and the mode comes
-          // along — "Office" alone described a place the app no longer has.
-          label={
-            targetWorkspace
-              ? t("sidebar:switchToWorkspace", { workspace: targetWorkspace.name })
-              : t("sidebar:createOfficeWorkspace")
-          }
-          collapsed={collapsed}
-          onClick={() => {
-            if (!targetWorkspace) {
-              router.push("/office/setup?mode=new");
-              return;
-            }
-            selectWorkspace(targetWorkspace);
-            router.push(workspaceHomeHref(targetWorkspace));
-          }}
-          testId={activeIsOffice ? "sidebar-kanban-button" : "sidebar-office-button"}
         />
       )}
       <ThemeToggle />

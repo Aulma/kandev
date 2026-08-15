@@ -1,7 +1,6 @@
 {
   "archivedLoadFailed": "Archived tasks could not be loaded",
   "collapseAllBranches": "Collapse all",
-  "createOfficeWorkspace": "Create an Office workspace",
   "orgChart": "Org Chart",
   "retry": "Retry",
   "activeWorkspaceBadge": "Active",
@@ -71,7 +70,6 @@
   "projects": "Projects",
   "queuedPromptCount_one": "{{count}} queued prompt",
   "queuedPromptCount_other": "{{count}} queued prompts",
-  "switchToWorkspace": "Switch to {{workspace}}",
   "wipQueuePosition": "Position {{position}} of {{total}} in {{step}} queue",
   "quickChat": "Quick Chat",
   "quickTerminal": "Quick terminal",
