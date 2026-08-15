@@ -36,6 +36,46 @@ test.describe("Sidebar office gating", () => {
     await expect(sidebar.getByRole("link", { name: "Inbox", exact: true })).toHaveCount(0);
   });
 
+  test("a Settings round trip keeps the active office workspace", async ({
+    testPage,
+    officeSeed,
+    seedData,
+  }) => {
+    // Start on the kanban workspace and switch to the Office one through the
+    // picker. The switch must be an explicit selection (picking the already
+    // active workspace is a no-op): selection is what records the workspace
+    // for later resolutions.
+    await testPage.goto(`/?workspaceId=${seedData.workspaceId}`);
+    await testPage.getByTestId("sidebar-workspace-trigger").click();
+    await testPage.getByTestId(`sidebar-workspace-item-${officeSeed.workspaceId}`).click();
+    await expect(testPage).toHaveURL(
+      (url) =>
+        url.pathname === "/office" &&
+        url.searchParams.get("workspaceId") === officeSeed.workspaceId,
+      { timeout: 10_000 },
+    );
+
+    // Into Settings through the gear. Settings resolves an active workspace of
+    // its own on entry, and it used to filter office workspaces out of that
+    // resolution — so the exit below landed on some kanban board instead of the
+    // workspace the user had active.
+    await testPage.getByTestId("sidebar-settings-gear").click();
+    await expect(testPage).toHaveURL(/\/settings/, { timeout: 10_000 });
+    await expect(testPage.getByTestId("sidebar-settings-gear")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    // Back out through the gear: home is the active workspace's home.
+    await testPage.getByTestId("sidebar-settings-gear").click();
+    await expect(testPage).toHaveURL(
+      (url) =>
+        url.pathname === "/office" &&
+        url.searchParams.get("workspaceId") === officeSeed.workspaceId,
+      { timeout: 10_000 },
+    );
+  });
+
   test("New Task follows the active workspace, not the route", async ({ testPage, seedData }) => {
     const newTask = testPage.getByTestId("create-task-button");
     const officeDialog = testPage.getByTestId("office-new-issue-dialog");

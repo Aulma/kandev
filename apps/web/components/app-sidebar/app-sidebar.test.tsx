@@ -159,6 +159,8 @@ function renderSidebar() {
 
 const TASKS_SECTION = "tasks-section";
 const INTEGRATIONS_SECTION = "integrations-section";
+const OFFICE_WORK_SECTION = "office-navigation-section-work";
+const OFFICE_OFFICE_SECTION = "office-navigation-section-office";
 
 function resetSidebarState() {
   navigationMock.pathname = "/";
@@ -197,8 +199,20 @@ describe("AppSidebar", () => {
 
     renderSidebar();
 
-    expect(screen.getByTestId("office-navigation-section-work")).toBeTruthy();
-    expect(screen.getByTestId("office-navigation-section-office")).toBeTruthy();
+    expect(screen.getByTestId(OFFICE_WORK_SECTION)).toBeTruthy();
+    expect(screen.getByTestId(OFFICE_OFFICE_SECTION)).toBeTruthy();
+    expect(screen.queryByTestId(TASKS_SECTION)).toBeNull();
+    expect(screen.queryByTestId(INTEGRATIONS_SECTION)).toBeNull();
+  });
+
+  it("keeps office navigation on shared routes when an office workspace is active", () => {
+    officeRouteMock.inOffice = true;
+    navigationMock.pathname = "/stats";
+
+    renderSidebar();
+
+    expect(screen.getByTestId(OFFICE_WORK_SECTION)).toBeTruthy();
+    expect(screen.getByTestId(OFFICE_OFFICE_SECTION)).toBeTruthy();
     expect(screen.queryByTestId(TASKS_SECTION)).toBeNull();
     expect(screen.queryByTestId(INTEGRATIONS_SECTION)).toBeNull();
   });
@@ -212,10 +226,10 @@ describe("AppSidebar", () => {
     const nav = screen.getByRole("navigation");
     const expectedSections = [
       "primary-nav",
-      "office-navigation-section-work",
+      OFFICE_WORK_SECTION,
       "projects-section",
       "agents-section",
-      "office-navigation-section-office",
+      OFFICE_OFFICE_SECTION,
     ];
     expect(
       Array.from(nav.querySelectorAll("[data-testid]"))
@@ -307,6 +321,6 @@ describe("AppSidebar before the workspace resolves", () => {
     expect(screen.getByTestId("primary-nav")).toBeTruthy();
     expect(screen.queryByTestId(TASKS_SECTION)).toBeNull();
     expect(screen.queryByTestId(INTEGRATIONS_SECTION)).toBeNull();
-    expect(screen.queryByTestId("office-navigation-section-work")).toBeNull();
+    expect(screen.queryByTestId(OFFICE_WORK_SECTION)).toBeNull();
   });
 });
