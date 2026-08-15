@@ -218,10 +218,6 @@ export function SetupWizard({
     try {
       const result = await submitOnboarding(data);
       toast.success(t("office:workspaceCreatedSuccessfully"));
-      // Through the shared helper rather than a hand-written cookie: this one
-      // wrote only the legacy office cookie, so a freshly created workspace was
-      // not recorded as the active one and the chrome that follows the active
-      // workspace could not see it.
       rememberWorkspaceSelectionById(result.workspaceId, "office");
       router.push(`/office?workspaceId=${result.workspaceId}`);
       router.refresh();

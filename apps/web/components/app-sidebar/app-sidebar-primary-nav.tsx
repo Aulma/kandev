@@ -26,10 +26,8 @@ export function AppSidebarPrimaryNav({ collapsed }: AppSidebarPrimaryNavProps) {
       <AppSidebarNavItem
         icon={IconHome}
         label={t("sidebar:home")}
-        // Through the shared rule rather than a local `inOffice ? "/office"`.
-        // That inline branch dropped the workspace id, so this row and the
-        // brand link two rows above it pointed at different URLs — the exact
-        // "two homes" disagreement the workspace-derived mode was meant to end.
+        // The same rule the brand link resolves through, so the two "home"
+        // affordances in this header can never point at different URLs.
         href={homeDestinationHref({ workspaceId, inOffice })}
         collapsed={collapsed}
         exactMatch

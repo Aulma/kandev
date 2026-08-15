@@ -27,8 +27,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const router = useRouter();
   const removeProject = useAppStore((s) => s.removeProject);
-  // The active workspace, not `project.workspaceId` — API-loaded project rows
-  // do not carry it (see the `Project` type).
+  // Not `project.workspaceId` — API-loaded rows do not carry it (see `Project`).
   const activeWorkspaceId = useAppStore((s) => s.workspaces.activeId);
   const storeProject = useAppStore((s) => selectOfficeProjects(s).find((p) => p.id === id));
   const [fetchedProject, setFetchedProject] = useState<Project | null>(null);

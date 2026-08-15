@@ -187,10 +187,9 @@ export function AppSidebar() {
   // workspace — hoisting it above the collapsible Tasks section is required so
   // a user with the section collapsed still gets fresh workflows on a switch.
   useEnsureWorkspaceWorkflows();
-  // Same reasoning for the office collections: the Projects and Agents
-  // sections, and the inbox badge, all read a store that only the `/office`
-  // route used to fill. Loading here ties the data to the active workspace
-  // instead of to the URL. No-ops for a kanban workspace.
+  // The office collections the sidebar renders (Projects, Agents, the inbox
+  // badge) load here so they follow the active workspace rather than the
+  // `/office` route family. No-ops for a kanban workspace.
   useOfficeWorkspaceData();
 
   const handleResize = useCallback(

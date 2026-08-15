@@ -236,11 +236,10 @@ function useOfficeRouteBootstrap(
           workspaceId: activeWorkspaceId,
         },
       });
-      // Agents, projects, inbox and meta are no longer loaded here: they follow
-      // the active workspace via `useOfficeWorkspaceData`, mounted in the
-      // always-present `AppSidebar`. Setting the active workspace above is what
-      // triggers that load, so this bootstrap is complete once the workspace is
-      // resolved.
+      // Data loading is not this bootstrap's job: agents, projects, inbox and
+      // meta follow the active workspace via `useOfficeWorkspaceData`, mounted
+      // in the always-present `AppSidebar`. Setting the active workspace above
+      // is what triggers that load.
       setBootstrap({ complete: true, onboardingComplete });
     }
 

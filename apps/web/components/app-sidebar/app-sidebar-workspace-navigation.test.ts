@@ -27,9 +27,6 @@ describe("app sidebar workspace navigation", () => {
   });
 
   it("records the active workspace in one write", () => {
-    // The contract that replaced a pair of type-specific helpers callers had to
-    // dispatch between — and sometimes call both of, for the workspace being
-    // left as well as the one entered, which is how the cookies drifted apart.
     rememberWorkspaceSelection(kanban);
     rememberWorkspaceSelection(office);
 

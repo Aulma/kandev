@@ -26,8 +26,7 @@ type ProjectHeaderProps = {
 export function ProjectHeader({ project }: ProjectHeaderProps) {
   const { t } = useTranslation();
   const updateProjectStore = useAppStore((s) => s.updateProject);
-  // The active workspace, not `project.workspaceId` — API-loaded project rows
-  // do not carry it (see the `Project` type).
+  // Not `project.workspaceId` — API-loaded rows do not carry it (see `Project`).
   const workspaceId = useAppStore((s) => s.workspaces.activeId);
 
   const [name, setName] = useState(project.name);

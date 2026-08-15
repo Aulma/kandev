@@ -29,11 +29,9 @@ type AgentsSectionProps = {
   collapsed: boolean;
 };
 
-// This section owns no fetching. It used to run its own `listAgentProfiles`
-// call plus a sequence guard, to recover from a store that only the `/office`
-// route filled, and to wipe that store when the active workspace went away.
-// `useOfficeWorkspaceData` (mounted in `AppSidebar`) now loads the agents, and
-// keying them by workspace id removed the need to clear anything.
+// This section owns no fetching: `useOfficeWorkspaceData` (mounted in
+// `AppSidebar`) loads the agents, keyed by workspace, and the selector only
+// ever exposes the active workspace's list — nothing to clear on a switch.
 
 function AgentsSectionHeaderAction({ router }: { router: { push: (path: string) => void } }) {
   const { t } = useTranslation();

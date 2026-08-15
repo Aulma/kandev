@@ -14,12 +14,9 @@ export function workspaceHomeHref(workspace: ModeWorkspace | undefined): string 
 }
 
 /**
- * Records a workspace as the active one.
- *
- * One write per workspace change. This replaced a pair of type-specific
- * `rememberLast…` helpers that call sites had to dispatch between — and
- * sometimes call both of, or call for the workspace being *left* as well as
- * the one being entered — which is how the two cookies drifted out of step.
+ * Records a workspace as the active one — one write per workspace change.
+ * Callers must not write these cookies themselves: split writes are how the
+ * active-workspace record and the legacy office cookie drift out of step.
  */
 export function rememberWorkspaceSelection(workspace: ModeWorkspace | undefined): void {
   if (!workspace) return;

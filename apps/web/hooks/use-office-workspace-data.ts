@@ -12,12 +12,10 @@ import { isOfficeWorkspace, selectActiveWorkspace } from "@/lib/state/slices/wor
  * projects and the inbox — for the active workspace, plus the global office
  * meta.
  *
- * This used to live inside `src/office-routes.tsx`, which meant the data
- * existed only while an `/office/*` route was mounted. Every consumer outside
- * that route (the sidebar's Projects and Agents sections, the inbox badge) read
- * a store the route happened to have filled, and rendered empty anywhere else.
- * Owning the fetch here makes the data a property of the selected workspace
- * rather than of the URL.
+ * Owning the fetch in always-mounted chrome — rather than in the office routes
+ * — makes the data a property of the selected workspace rather than of the
+ * URL, so the sidebar's sections and the inbox badge are filled on every
+ * surface, not just under `/office/*`.
  *
  * Deliberately gated on the workspace record, not on `useInOffice()`: the point
  * is that an office workspace has its data loaded wherever you are. The

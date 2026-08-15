@@ -129,8 +129,7 @@ export function ProjectExecutorSection({ project }: ProjectExecutorSectionProps)
         newConfig.resource_limits = limits;
       }
       await updateProject(project.id, { executorConfig: newConfig });
-      // The active workspace, not `project.workspaceId` — API-loaded project
-      // rows do not carry it (see the `Project` type).
+      // Not `project.workspaceId` — API-loaded rows do not carry it (see `Project`).
       if (workspaceId) {
         updateProjectStore(workspaceId, project.id, { executorConfig: newConfig });
       }

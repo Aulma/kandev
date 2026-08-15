@@ -84,8 +84,6 @@ function officeHydrationState({
   inboxCount: number;
 }): Omit<AppState["office"], "meta"> {
   return {
-    // Keyed by the workspace the fetches were scoped to, so this hydration
-    // cannot be read while a different workspace is active.
     agentProfilesByWorkspaceId: keyByWorkspace(activeWorkspaceId, agents),
     skills: [],
     projectsByWorkspaceId: keyByWorkspace(activeWorkspaceId, projects),

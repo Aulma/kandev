@@ -45,11 +45,9 @@ import type { Destination, NavContext } from "./types";
  */
 export function homeDestinationHref(ctx: NavContext): string {
   if (!ctx.inOffice) return linkToTaskOverview({ workspaceId: ctx.workspaceId ?? undefined });
-  // Byte-identical to `workspaceHomeHref` for the same workspace. Both are
-  // rendered at once — the sidebar brand link uses one, the Home row and the
-  // topbar's home crumb the other — and two "home" affordances a few pixels
-  // apart pointing at different URLs is the disagreement this whole change
-  // exists to remove.
+  // Byte-identical to `workspaceHomeHref` for the same workspace: the sidebar
+  // brand link uses that one, while the Home row and the topbar's home crumb
+  // use this one, and they render side by side.
   return ctx.workspaceId ? `/office?workspaceId=${ctx.workspaceId}` : "/office";
 }
 

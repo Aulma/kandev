@@ -28,9 +28,7 @@ export function ProjectReposSection({ project }: ProjectReposSectionProps) {
     async (next: string[], successKey: string, failureKey: string) => {
       try {
         await updateProject(project.id, { repositories: next });
-        // The active workspace, not `project.workspaceId` — API-loaded rows
-        // do not carry it, and this page only ever shows a project belonging
-        // to the workspace currently selected.
+        // Not `project.workspaceId` — API-loaded rows do not carry it (see `Project`).
         if (workspaceId) {
           updateProjectStore(workspaceId, project.id, { repositories: next });
         }

@@ -16,12 +16,9 @@ export type ModeWorkspace = { id: string; office_workflow_id?: string | null };
 /**
  * True when the workspace is an Office workspace.
  *
- * The single definition of that question. It used to live in
- * `components/app-sidebar/app-sidebar-workspace-navigation.ts`, so anything
- * outside the sidebar either imported UI code to ask it or re-derived
- * `!!workspace.office_workflow_id` inline. Those inline copies are how the
- * office filter in `resolveSettingsActiveWorkspaceId` and the sidebar's own
- * mode check came to disagree about which workspaces count.
+ * The single definition of that question — inline
+ * `!!workspace.office_workflow_id` copies are how surfaces come to disagree
+ * about which workspaces count.
  */
 export function isOfficeWorkspace(workspace: ModeWorkspace | null | undefined): boolean {
   return Boolean(workspace?.office_workflow_id);
