@@ -49,14 +49,15 @@ export function useOfficeWorkspaceData(): void {
   }, []);
   const isLatest = useCallback((key: string, seq: number) => seqRef.current[key] === seq, []);
 
+  // A failed refresh is a no-write: this hook refreshes data other surfaces
+  // already hydrated, so writing a fallback on rejection would blank the last
+  // known-good agents, projects, or inbox badge over a transient error.
   const loadAgents = useCallback(async () => {
     if (!workspaceId) return;
     const key = `agents:${workspaceId}`;
     const seq = nextSeq(key);
-    const res = await listAgentProfiles(workspaceId, { cache: "no-store" }).catch(() => ({
-      agents: [],
-    }));
-    if (!isLatest(key, seq)) return;
+    const res = await listAgentProfiles(workspaceId, { cache: "no-store" }).catch(() => null);
+    if (!res || !isLatest(key, seq)) return;
     store.getState().setOfficeAgentProfiles(workspaceId, res.agents ?? []);
   }, [isLatest, nextSeq, store, workspaceId]);
 
@@ -64,10 +65,8 @@ export function useOfficeWorkspaceData(): void {
     if (!workspaceId) return;
     const key = `projects:${workspaceId}`;
     const seq = nextSeq(key);
-    const res = await listProjects(workspaceId, { cache: "no-store" }).catch(() => ({
-      projects: [],
-    }));
-    if (!isLatest(key, seq)) return;
+    const res = await listProjects(workspaceId, { cache: "no-store" }).catch(() => null);
+    if (!res || !isLatest(key, seq)) return;
     store.getState().setProjects(workspaceId, res.projects ?? []);
   }, [isLatest, nextSeq, store, workspaceId]);
 
@@ -75,11 +74,8 @@ export function useOfficeWorkspaceData(): void {
     if (!workspaceId) return;
     const key = `inbox:${workspaceId}`;
     const seq = nextSeq(key);
-    const res = await getInbox(workspaceId, { cache: "no-store" }).catch(() => ({
-      items: [],
-      total_count: 0,
-    }));
-    if (!isLatest(key, seq)) return;
+    const res = await getInbox(workspaceId, { cache: "no-store" }).catch(() => null);
+    if (!res || !isLatest(key, seq)) return;
     const items = res.items ?? [];
     store.getState().setInboxItems(workspaceId, items);
     store.getState().setInboxCount(workspaceId, res.total_count ?? items.length);

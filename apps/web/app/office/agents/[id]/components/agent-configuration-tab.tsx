@@ -116,7 +116,7 @@ export function AgentConfigurationTab({ agent }: AgentConfigurationTabProps) {
     } finally {
       setSaving(false);
     }
-  }, [agent.id, form, updateStore]);
+  }, [agent.id, agent.workspaceId, form, updateStore]);
 
   return (
     <div className="space-y-4 mt-4" data-testid="agent-configuration-tab">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { IconPlus } from "@tabler/icons-react";
 import { Button } from "@kandev/ui/button";
 import { useAppStore } from "@/components/state-provider";
@@ -31,16 +31,21 @@ export function AgentsPageClient({ initialAgents }: AgentsPageClientProps) {
   useWorkspaceRouting(workspaceId);
   useRoutingPreview(workspaceId);
 
+  // Hydrate the SSR payload exactly once: it belongs to the workspace that was
+  // active at SSR time, and re-running on a workspace switch would file it
+  // under the new workspace.
+  const initialHydratedRef = useRef(false);
   useEffect(() => {
-    if (!workspaceId || initialAgents.length === 0) return;
+    if (initialHydratedRef.current || !workspaceId || initialAgents.length === 0) return;
+    initialHydratedRef.current = true;
     setOfficeAgentProfiles(workspaceId, initialAgents);
   }, [initialAgents, setOfficeAgentProfiles, workspaceId]);
 
   const refetchAgents = useCallback(async () => {
     if (!workspaceId) return;
-    const res = await listAgentProfiles(workspaceId).catch(() => ({
-      agents: [] as AgentProfile[],
-    }));
+    // A failed refresh keeps the last known-good list rather than blanking it.
+    const res = await listAgentProfiles(workspaceId).catch(() => null);
+    if (!res) return;
     setOfficeAgentProfiles(workspaceId, res.agents ?? []);
   }, [workspaceId, setOfficeAgentProfiles]);
 

@@ -56,7 +56,9 @@ export default function AgentDetailLayout({ children, params }: AgentDetailLayou
   // (e.g. the agent was created after the SSR fetch fired).
   const refetchAgents = useCallback(async () => {
     if (!workspaceId) return;
-    const res = await listAgentProfiles(workspaceId).catch(() => ({ agents: [] }));
+    // A failed refresh keeps the last known-good list rather than blanking it.
+    const res = await listAgentProfiles(workspaceId).catch(() => null);
+    if (!res) return;
     setOfficeAgentProfiles(workspaceId, res.agents ?? []);
   }, [workspaceId, setOfficeAgentProfiles]);
 

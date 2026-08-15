@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IconSearch } from "@tabler/icons-react";
 import { Tabs, TabsList, TabsTrigger } from "@kandev/ui/tabs";
 import { Input } from "@kandev/ui/input";
@@ -25,8 +25,13 @@ function useInboxData(workspaceId: string | null, initialItems: InboxItem[], ini
   const setInboxCount = useAppStore((s) => s.setInboxCount);
   const setOfficeAgentProfiles = useAppStore((s) => s.setOfficeAgentProfiles);
 
+  // Hydrate the SSR payload exactly once: it belongs to the workspace that was
+  // active at SSR time, and re-running on a workspace switch would file it
+  // under the new workspace.
+  const initialHydratedRef = useRef(false);
   useEffect(() => {
-    if (!workspaceId) return;
+    if (initialHydratedRef.current || !workspaceId) return;
+    initialHydratedRef.current = true;
     if (initialItems.length > 0) setInboxItems(workspaceId, initialItems);
     if (initialCount > 0) setInboxCount(workspaceId, initialCount);
   }, [initialItems, initialCount, setInboxItems, setInboxCount, workspaceId]);

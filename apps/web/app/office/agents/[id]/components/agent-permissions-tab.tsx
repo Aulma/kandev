@@ -50,7 +50,7 @@ export function AgentPermissionsTab({ agent }: AgentPermissionsTabProps) {
     } finally {
       setSaving(false);
     }
-  }, [agent.id, perms, updateStore]);
+  }, [agent.id, agent.workspaceId, perms, updateStore]);
 
   const isDefault = (key: string) => {
     const current = perms[key];

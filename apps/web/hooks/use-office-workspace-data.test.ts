@@ -165,6 +165,27 @@ describe("useOfficeWorkspaceData", () => {
     expect(officeWrites[0][1]).toEqual([{ id: "newer" }]);
   });
 
+  it("keeps the last known-good data when a refresh fails", async () => {
+    // This hook refreshes collections other surfaces already hydrated. A
+    // transient failure writing a fallback would blank valid sidebar data and
+    // reset the inbox badge until the next successful refresh.
+    const refreshFailure = new Error("network down");
+    listAgentProfiles.mockRejectedValue(refreshFailure);
+    listProjects.mockRejectedValue(refreshFailure);
+    getInbox.mockRejectedValue(refreshFailure);
+    getMeta.mockRejectedValue(refreshFailure);
+
+    await act(async () => {
+      renderHook(() => useOfficeWorkspaceData());
+    });
+
+    expect(setOfficeAgentProfiles).not.toHaveBeenCalled();
+    expect(setProjects).not.toHaveBeenCalled();
+    expect(setInboxItems).not.toHaveBeenCalled();
+    expect(setInboxCount).not.toHaveBeenCalled();
+    expect(setMeta).not.toHaveBeenCalled();
+  });
+
   it("files a late response under the workspace it was requested for", async () => {
     // A response arriving after the user moved on is not dropped just because
     // another workspace started loading — it lands under its own key, where it

@@ -238,9 +238,13 @@ export function OfficePageClient({ initialDashboard }: OfficePageClientProps) {
   // Hydrate from SSR exactly once on first mount; subsequent updates flow
   // through the WS-driven refetch below. Skipping the unconditional mount
   // fetch removes a redundant round-trip when SSR data is already in the
-  // store (Stream G of office optimization).
+  // store (Stream G of office optimization). Once means once: the payload
+  // belongs to the workspace that was active at SSR time, and re-running on a
+  // workspace switch would file it under the new workspace.
+  const initialDashboardHydratedRef = useRef(false);
   useEffect(() => {
-    if (!workspaceId || !initialDashboard) return;
+    if (initialDashboardHydratedRef.current || !workspaceId || !initialDashboard) return;
+    initialDashboardHydratedRef.current = true;
     setDashboard(workspaceId, initialDashboard);
   }, [initialDashboard, setDashboard, workspaceId]);
 

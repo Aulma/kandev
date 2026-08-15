@@ -270,7 +270,7 @@ export function AgentOverviewTab({ agent }: AgentOverviewTabProps) {
     } finally {
       setSaving(false);
     }
-  }, [agent.id, name, role, budget, maxConcurrent, executorType, updateStore]);
+  }, [agent.id, agent.workspaceId, name, role, budget, maxConcurrent, executorType, updateStore]);
 
   const reportsToAgent = agents.find((a) => a.id === agent.reportsTo);
 
