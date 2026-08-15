@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { LEGACY_OFFICE_ACTIVE_WORKSPACE_COOKIE } from "@/lib/routing/route-bootstrap";
 import {
   LAST_KANBAN_WORKSPACE_KEY,
-  OFFICE_ACTIVE_WORKSPACE_COOKIE,
   rememberLastOfficeWorkspace,
   rememberLastKanbanWorkspace,
   resolveLastOfficeWorkspace,
@@ -61,7 +61,7 @@ describe("app sidebar workspace navigation", () => {
       `${ACTIVE_WORKSPACE_COOKIE}=${encodeURIComponent(officeWithReservedChars.id)}`,
     );
     expect(document.cookie).toContain(
-      `${OFFICE_ACTIVE_WORKSPACE_COOKIE}=${encodeURIComponent(officeWithReservedChars.id)}`,
+      `${LEGACY_OFFICE_ACTIVE_WORKSPACE_COOKIE}=${encodeURIComponent(officeWithReservedChars.id)}`,
     );
     expect(resolveLastOfficeWorkspace([office, officeWithReservedChars])).toBe(
       officeWithReservedChars,

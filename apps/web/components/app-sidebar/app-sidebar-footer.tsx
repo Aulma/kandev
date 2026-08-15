@@ -23,8 +23,8 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { CurrentUserChip } from "./current-user-chip";
 import { linkToTask } from "@/lib/links";
 import { cn } from "@/lib/utils";
+import { isOfficeWorkspace } from "@/lib/state/slices/workspace/selectors";
 import {
-  isOfficeWorkspace,
   rememberLastOfficeWorkspace,
   rememberLastKanbanWorkspace,
   resolveLastOfficeWorkspace,
