@@ -58,17 +58,23 @@ describe("WorkspaceScopeProvider", () => {
     // The seam the side-by-side layout needs: two providers, two workspaces,
     // one store. Consumers below each one are unchanged.
     expect(
-      renderScope({ workspaces: { items: [KANBAN, OFFICE], activeId: KANBAN.id } }, {
-        workspaceId: OFFICE.id,
-      }),
+      renderScope(
+        { workspaces: { items: [KANBAN, OFFICE], activeId: KANBAN.id } },
+        {
+          workspaceId: OFFICE.id,
+        },
+      ),
     ).toBe("office:office-1");
   });
 
   it("resolves rather than holds when a populated list lacks the named workspace", () => {
     expect(
-      renderScope({ workspaces: { items: [KANBAN], activeId: KANBAN.id } }, {
-        workspaceId: "deleted-workspace",
-      }),
+      renderScope(
+        { workspaces: { items: [KANBAN], activeId: KANBAN.id } },
+        {
+          workspaceId: "deleted-workspace",
+        },
+      ),
     ).toBe("kanban:none");
   });
 });

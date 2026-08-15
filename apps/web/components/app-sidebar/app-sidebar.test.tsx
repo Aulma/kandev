@@ -84,7 +84,8 @@ vi.mock("@/hooks/use-in-office", () => ({
   // Mode is derived from the active workspace now, not the route. These specs
   // cover section composition per mode, so they pin a resolved mode directly;
   // the unresolved case has its own spec below.
-  useOfficeModeState: () => officeRouteMock.mode ?? (officeRouteMock.inOffice ? "office" : "kanban"),
+  useOfficeModeState: () =>
+    officeRouteMock.mode ?? (officeRouteMock.inOffice ? "office" : "kanban"),
 }));
 
 vi.mock("@/hooks/use-workflows", () => ({

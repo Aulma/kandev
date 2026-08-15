@@ -239,9 +239,7 @@ export function SpaRoutes({ routeData }: { routeData?: BootRouteData }) {
     return <PluginRoute path={route.path} />;
   }
   if (route.kind === "kanban") {
-    return (
-      <KanbanRoute route={route} fallback={<RouteLoading routeNameKey="sidebar:office" />} />
-    );
+    return <KanbanRoute route={route} fallback={<RouteLoading routeNameKey="sidebar:office" />} />;
   }
   if (route.kind === "taskDetail") {
     return (
