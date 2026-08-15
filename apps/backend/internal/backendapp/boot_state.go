@@ -86,8 +86,15 @@ func bootInitialState(
 		// Office-vs-kanban chrome from the active workspace record, so a settings
 		// boot that names no workspace leaves the sidebar unable to tell which
 		// mode it is in until the client's own fetch lands.
-		activeID := builder.settingsWorkspaceID(ctx, req)
-		builder.addWorkspaceState(ctx, state, &activeID)
+		// One workspace snapshot for both selection and serialisation: listing
+		// twice could name an activeId that a concurrent deletion has already
+		// removed from items.
+		workspaces, ok := builder.listBootWorkspaces(ctx)
+		activeID := ""
+		if ok {
+			activeID = builder.settingsWorkspaceID(ctx, req, workspaces)
+			builder.addWorkspaceStateFrom(workspaces, state, &activeID)
+		}
 		builder.addUserSettingsState(ctx, state, activeID)
 		builder.addSettingsRouteState(ctx, state, route.Path)
 	}
@@ -157,14 +164,32 @@ type bootStateBuilder struct {
 }
 
 func (b bootStateBuilder) addWorkspaceState(ctx context.Context, state map[string]any, activeID *string) {
-	if b.p.taskSvc == nil {
+	workspaces, ok := b.listBootWorkspaces(ctx)
+	if !ok {
 		return
+	}
+	b.addWorkspaceStateFrom(workspaces, state, activeID)
+}
+
+// listBootWorkspaces returns the workspace snapshot a boot payload is built
+// from; ok is false when the service is unavailable or the listing fails.
+func (b bootStateBuilder) listBootWorkspaces(ctx context.Context) ([]*taskmodels.Workspace, bool) {
+	if b.p.taskSvc == nil {
+		return nil, false
 	}
 	workspaces, err := b.p.taskSvc.ListWorkspaces(ctx)
 	if err != nil {
 		b.logBootError("list workspaces", err)
-		return
+		return nil, false
 	}
+	return workspaces, true
+}
+
+func (b bootStateBuilder) addWorkspaceStateFrom(
+	workspaces []*taskmodels.Workspace,
+	state map[string]any,
+	activeID *string,
+) {
 	items := make([]taskdto.WorkspaceDTO, 0, len(workspaces))
 	for _, workspace := range workspaces {
 		if workspace == nil {
@@ -189,15 +214,11 @@ func (b bootStateBuilder) addWorkspaceState(ctx context.Context, state map[strin
 // Deliberately not filtered to kanban workspaces. Settings is shared chrome —
 // reachable from either mode — so preferring a kanban workspace here would
 // silently switch an Office user's active workspace just by opening Settings.
-func (b bootStateBuilder) settingsWorkspaceID(ctx context.Context, req *http.Request) string {
-	if b.p.taskSvc == nil {
-		return ""
-	}
-	workspaces, err := b.p.taskSvc.ListWorkspaces(ctx)
-	if err != nil {
-		b.logBootError("list settings workspaces", err)
-		return ""
-	}
+func (b bootStateBuilder) settingsWorkspaceID(
+	ctx context.Context,
+	req *http.Request,
+	workspaces []*taskmodels.Workspace,
+) string {
 	settingsWorkspaceID := ""
 	if settings, ok := b.userSettings(ctx); ok {
 		settingsWorkspaceID = settings.Settings.WorkspaceID

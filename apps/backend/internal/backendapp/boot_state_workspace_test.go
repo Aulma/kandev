@@ -17,6 +17,12 @@ import (
 //
 // Pre-auth routes are absent by design — they render the login/setup screens
 // and deliberately carry no data.
+//
+// RouteOffice is also absent, deliberately: its payload comes from
+// addOfficeRouteState, which emits nothing before onboarding completes (the
+// setup wizard boots bare), so the invariant does not hold unconditionally
+// there. The completed-onboarding path needs the office services this harness
+// does not construct; the office e2e suite covers that boot end to end.
 var authenticatedSPARoutes = []webapp.RouteName{
 	webapp.RouteHome,
 	webapp.RouteUnknown,
