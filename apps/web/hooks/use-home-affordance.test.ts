@@ -64,11 +64,14 @@ describe("useHomeAffordance", () => {
     expect(result.current.mode).toBe("phone");
   });
 
-  it("lands on the office dashboard inside Office", () => {
+  it("lands on the office dashboard for an office workspace", () => {
     inOffice = true;
 
     const { result } = renderHook(() => useHomeAffordance());
 
-    expect(result.current.href).toBe("/office");
+    // Carries the workspace id so this is byte-identical to the brand link's
+    // `workspaceHomeHref`. The two render side by side in the sidebar header,
+    // and pointing at different URLs was the original "two homes" defect.
+    expect(result.current.href).toBe("/office?workspaceId=ws-1");
   });
 });

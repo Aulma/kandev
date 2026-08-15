@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   toggleSettingsMode: vi.fn(),
   logout: vi.fn().mockResolvedValue(undefined),
   setImproveDialogOpen: vi.fn(),
+  setActiveWorkspace: vi.fn(),
 }));
 
 const state = {
@@ -21,6 +22,7 @@ const state = {
   },
   appSidebar: { settingsMode: false, improveDialogOpen: false },
   setImproveDialogOpen: mocks.setImproveDialogOpen,
+  setActiveWorkspace: mocks.setActiveWorkspace,
   auth: {
     mode: "disabled" as string,
     user: null as { display_name: string; email: string } | null,
@@ -146,6 +148,7 @@ function resetFooterState() {
   state.userSettings.appStatusBarEnabled = true;
   window.localStorage.clear();
   document.cookie = "office-active-workspace=; path=/; max-age=0";
+  mocks.setActiveWorkspace.mockClear();
   mocks.routerPush.mockClear();
   mocks.toggleSettingsMode.mockClear();
 }
@@ -198,6 +201,11 @@ describe("AppSidebarFooter", () => {
     fireEvent.click(screen.getByRole("button", { name: "Office" }));
 
     expect(mocks.routerPush).toHaveBeenCalledWith("/office?workspaceId=office-2");
+    // Switching mode *is* switching workspace now that chrome follows the
+    // workspace record. Without this the store keeps the old workspace until
+    // the destination route re-resolves it, and the sidebar paints the mode
+    // that was just left.
+    expect(mocks.setActiveWorkspace).toHaveBeenCalledWith("office-2");
   });
 
   it("navigates to office setup when no office workspace exists", () => {

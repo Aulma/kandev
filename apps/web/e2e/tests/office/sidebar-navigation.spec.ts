@@ -91,27 +91,41 @@ test.describe("Sidebar Home destination", () => {
     await expect(testPage.getByText("Agents Enabled")).toBeVisible({ timeout: 10_000 });
   });
 
-  test("Home goes to the Kanban board from a regular route", async ({
+  test("Home follows the workspace, not the route, from a shared surface", async ({
     testPage,
     officeSeed: _,
   }) => {
-    // Start from a non-home regular route so the Home click is a real
-    // navigation (not a no-op): from a non-office route `useInOffice()` is
-    // false, so Home must land back on the board at `/`. Avoid settings routes
-    // because they intentionally replace the primary nav with settings mode.
+    // This spec used to assert the opposite: from /stats, Home went to the
+    // kanban board regardless of which workspace was active. That was the
+    // pathname rule — /stats is not an /office route — and it is exactly what
+    // made "go Home" switch an Office user's workspace as a side effect.
+    await testPage.goto("/office");
+    await expect(testPage.getByText("Agents Enabled")).toBeVisible({ timeout: 15_000 });
+
     await testPage.goto("/stats");
     const home = testPage.getByRole("link", { name: "Home", exact: true });
     await expect(home).toBeVisible({ timeout: 15_000 });
+    // Still an office workspace, so Home still points at its Office home even
+    // though /stats is a shared, non-office route.
+    await expect(home).toHaveAttribute("href", /^\/office\?workspaceId=.+$/);
+
+    await home.click();
+    await expect(testPage).toHaveURL(/\/office(\?|$)/);
+    await expect(testPage.getByText("Agents Enabled")).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("Home goes to the Kanban board when a kanban workspace is active", async ({
+    testPage,
+    officeSeed: _,
+  }) => {
+    await testPage.goto("/");
+    const home = testPage.getByRole("link", { name: "Home", exact: true });
+    await expect(home).toBeVisible({ timeout: 15_000 });
     await expect(home).toHaveAttribute("href", /^\/\?home=overview&workspaceId=.+$/);
-    const homeHref = await home.getAttribute("href");
-    const workspaceId = new URL(homeHref ?? "/", testPage.url()).searchParams.get("workspaceId");
-    expect(workspaceId).toBeTruthy();
+
     await home.click();
     await expect(testPage).toHaveURL(
-      (url) =>
-        url.pathname === "/" &&
-        url.searchParams.get("home") === "overview" &&
-        url.searchParams.get("workspaceId") === workspaceId,
+      (url) => url.pathname === "/" && url.searchParams.get("home") === "overview",
     );
     await expect(testPage.getByTestId("kanban-board")).toBeVisible({ timeout: 15_000 });
   });

@@ -258,6 +258,7 @@ export function AppSidebarFooter({ collapsed, onToggleSettingsMode }: AppSidebar
   const targetWorkspace = activeIsOffice
     ? resolveLastKanbanWorkspace(workspaces.items)
     : resolveLastOfficeWorkspace(workspaces.items);
+  const setActiveWorkspace = useAppStore((s) => s.setActiveWorkspace);
   const settingsMode = useAppStore((s) => s.appSidebar.settingsMode);
   const toggleSettings = useSettingsGearToggle(settingsMode, activeWorkspace, onToggleSettingsMode);
   const officeEnabled = useFeature("office");
@@ -319,6 +320,11 @@ export function AppSidebarFooter({ collapsed, onToggleSettingsMode }: AppSidebar
               !activeIsOffice && !targetWorkspace
                 ? "/office/setup?mode=new"
                 : workspaceHomeHref(targetWorkspace ?? undefined);
+            // Switching mode *is* switching workspace now that chrome follows
+            // the workspace record. Without this the store keeps the old
+            // workspace until the destination route re-resolves it, and the
+            // sidebar paints the mode we just left.
+            if (targetWorkspace) setActiveWorkspace(targetWorkspace.id);
             router.push(href);
           }}
           testId={activeIsOffice ? "sidebar-kanban-button" : "sidebar-office-button"}
