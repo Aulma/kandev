@@ -34,10 +34,10 @@ const state = {
     } as Record<string, boolean>,
   },
   office: {
-    agentProfiles: [] as AgentProfile[],
-    projects: [] as Array<unknown>,
-    inboxItems: [] as Array<unknown>,
-    inboxCount: 0,
+    agentProfilesByWorkspaceId: {} as Record<string, AgentProfile[]>,
+    projectsByWorkspaceId: {} as Record<string, Array<unknown>>,
+    inboxItemsByWorkspaceId: {} as Record<string, Array<unknown>>,
+    inboxCountByWorkspaceId: {} as Record<string, number>,
   },
   workspaces: {
     activeId: defaultWorkspaceId as string | null,
@@ -127,10 +127,10 @@ vi.mock("@kandev/ui/tooltip", () => ({
 import { AgentsSection } from "./agents-section";
 
 const resetOfficeState = () => {
-  state.office.agentProfiles = [];
-  state.office.projects = [];
-  state.office.inboxItems = [];
-  state.office.inboxCount = 0;
+  state.office.agentProfilesByWorkspaceId = {};
+  state.office.projectsByWorkspaceId = {};
+  state.office.inboxItemsByWorkspaceId = {};
+  state.office.inboxCountByWorkspaceId = {};
   state.workspaces.activeId = defaultWorkspaceId;
 };
 
@@ -159,16 +159,18 @@ describe("AgentsSection header", () => {
   });
 });
 
-describe("AgentsSection stale state cleanup", () => {
+describe("AgentsSection workspace scoping", () => {
   it("does not render stale agent links when no office workspace is active", () => {
     state.workspaces.activeId = null;
-    state.office.agentProfiles = [
-      createAgentProfile({
-        id: "stale-agent",
-        workspace: staleWorkspaceId,
-        name: "Stale Agent",
-      }),
-    ];
+    state.office.agentProfilesByWorkspaceId = {
+      [staleWorkspaceId]: [
+        createAgentProfile({
+          id: "stale-agent",
+          workspace: staleWorkspaceId,
+          name: "Stale Agent",
+        }),
+      ],
+    };
 
     render(<AgentsSection collapsed={false} />);
 
@@ -176,27 +178,39 @@ describe("AgentsSection stale state cleanup", () => {
     expect(screen.getByText(noAgentsText)).toBeTruthy();
   });
 
-  it("clears all office data when workspace becomes inactive", () => {
+  it("renders only the active workspace's agents, without clearing the other's", () => {
+    // Before the office collections were keyed by workspace, this section had
+    // to actively wipe the store when the active workspace went away. Keying
+    // makes the wipe unnecessary: the other workspace's agents simply are not
+    // reachable through the selector, and their data survives a switch back.
     state.workspaces.activeId = defaultWorkspaceId;
-    state.office.agentProfiles = [
-      createAgentProfile({
-        id: "active-agent",
-        workspace: defaultWorkspaceId,
-        name: "Active Agent",
-      }),
-    ];
-    state.office.projects = [{ id: "project-1" }];
-    state.office.inboxItems = [{ id: "item-1" }];
-    state.office.inboxCount = 2;
+    state.office.agentProfilesByWorkspaceId = {
+      [defaultWorkspaceId]: [
+        createAgentProfile({
+          id: "active-agent",
+          workspace: defaultWorkspaceId,
+          name: "Active Agent",
+        }),
+      ],
+      [staleWorkspaceId]: [
+        createAgentProfile({
+          id: "other-agent",
+          workspace: staleWorkspaceId,
+          name: "Other Agent",
+        }),
+      ],
+    };
 
     const { rerender } = render(<AgentsSection collapsed={false} />);
-    state.workspaces.activeId = null;
+    expect(screen.getByRole("link", { name: /active agent/i })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /other agent/i })).toBeNull();
+
+    state.workspaces.activeId = staleWorkspaceId;
     rerender(<AgentsSection collapsed={false} />);
 
-    expect(state.setOfficeAgentProfiles).toHaveBeenCalledWith([]);
-    expect(state.setProjects).toHaveBeenCalledWith([]);
-    expect(state.setInboxItems).toHaveBeenCalledWith([]);
-    expect(state.setInboxCount).toHaveBeenCalledWith(0);
+    expect(screen.getByRole("link", { name: /other agent/i })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /active agent/i })).toBeNull();
+    expect(state.setOfficeAgentProfiles).not.toHaveBeenCalledWith(expect.anything(), []);
   });
 
   it("does not overwrite stale agent state when workspace changes mid-fetch", async () => {
@@ -273,19 +287,25 @@ describe("AgentsSection request sequencing", () => {
     });
 
     expect(state.setOfficeAgentProfiles).toHaveBeenCalledTimes(1);
-    expect(state.setOfficeAgentProfiles).toHaveBeenCalledWith([agentFromThirdRequest]);
+    expect(state.setOfficeAgentProfiles).toHaveBeenCalledWith(defaultWorkspaceId, [
+      agentFromThirdRequest,
+    ]);
   });
 });
 
 describe("AgentsSection error badge", () => {
   const renderWithFailedRuns = (failedRuns: number) => {
-    state.office.agentProfiles = [
-      createAgentProfile({ id: "agent-1", workspace: defaultWorkspaceId, name: "Alfa" }),
-    ];
-    state.office.inboxItems = Array.from({ length: failedRuns }, () => ({
-      type: "agent_run_failed",
-      payload: { agent_profile_id: agentProfileId("agent-1") },
-    }));
+    state.office.agentProfilesByWorkspaceId = {
+      [defaultWorkspaceId]: [
+        createAgentProfile({ id: "agent-1", workspace: defaultWorkspaceId, name: "Alfa" }),
+      ],
+    };
+    state.office.inboxItemsByWorkspaceId = {
+      [defaultWorkspaceId]: Array.from({ length: failedRuns }, () => ({
+        type: "agent_run_failed",
+        payload: { agent_profile_id: agentProfileId("agent-1") },
+      })),
+    };
     render(<AgentsSection collapsed={false} />);
   };
 

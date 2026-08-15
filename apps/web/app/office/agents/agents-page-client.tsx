@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { IconPlus } from "@tabler/icons-react";
 import { Button } from "@kandev/ui/button";
 import { useAppStore } from "@/components/state-provider";
+import { selectOfficeAgentProfiles } from "@/lib/state/slices/office/selectors";
 import { useOfficeRefetch } from "@/hooks/use-office-refetch";
 import { useRoutingPreview } from "@/hooks/domains/office/use-routing-preview";
 import { useWorkspaceRouting } from "@/hooks/domains/office/use-workspace-routing";
@@ -21,7 +22,7 @@ type AgentsPageClientProps = {
 
 export function AgentsPageClient({ initialAgents }: AgentsPageClientProps) {
   const { t } = useTranslation();
-  const agents = useAppStore((s) => s.office.agentProfiles);
+  const agents = useAppStore(selectOfficeAgentProfiles);
   const setOfficeAgentProfiles = useAppStore((s) => s.setOfficeAgentProfiles);
   const workspaceId = useAppStore((s) => s.workspaces.activeId);
   const [showCreate, setShowCreate] = useState(false);
@@ -31,17 +32,16 @@ export function AgentsPageClient({ initialAgents }: AgentsPageClientProps) {
   useRoutingPreview(workspaceId);
 
   useEffect(() => {
-    if (initialAgents.length > 0) {
-      setOfficeAgentProfiles(initialAgents);
-    }
-  }, [initialAgents, setOfficeAgentProfiles]);
+    if (!workspaceId || initialAgents.length === 0) return;
+    setOfficeAgentProfiles(workspaceId, initialAgents);
+  }, [initialAgents, setOfficeAgentProfiles, workspaceId]);
 
   const refetchAgents = useCallback(async () => {
     if (!workspaceId) return;
     const res = await listAgentProfiles(workspaceId).catch(() => ({
       agents: [] as AgentProfile[],
     }));
-    setOfficeAgentProfiles(res.agents ?? []);
+    setOfficeAgentProfiles(workspaceId, res.agents ?? []);
   }, [workspaceId, setOfficeAgentProfiles]);
 
   // Fire once on mount to recover from stale SSR hydration. The SSR fetch

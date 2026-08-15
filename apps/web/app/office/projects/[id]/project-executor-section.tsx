@@ -128,7 +128,7 @@ export function ProjectExecutorSection({ project }: ProjectExecutorSectionProps)
         newConfig.resource_limits = limits;
       }
       await updateProject(project.id, { executorConfig: newConfig });
-      updateProjectStore(project.id, { executorConfig: newConfig });
+      updateProjectStore(project.workspaceId, project.id, { executorConfig: newConfig });
       setDirty(false);
       toast.success(t("office:executorConfigurationSaved"));
     } catch (err) {

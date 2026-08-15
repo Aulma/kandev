@@ -6,6 +6,7 @@ import { usePathname } from "@/lib/routing/client-router";
 import { IconInfoCircle } from "@tabler/icons-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@kandev/ui/tooltip";
 import { useAppStore } from "@/components/state-provider";
+import { selectOfficeAgentProfile } from "@/lib/state/slices/office/selectors";
 import { useOfficeRefetch } from "@/hooks/use-office-refetch";
 import { listAgentProfiles } from "@/lib/api/domains/office-api";
 import { cn } from "@/lib/utils";
@@ -46,7 +47,7 @@ export default function AgentDetailLayout({ children, params }: AgentDetailLayou
   const { t } = useTranslation();
   const { id } = use(params);
   const pathname = usePathname();
-  const agent = useAppStore((s) => s.office.agentProfiles.find((a) => a.id === id));
+  const agent = useAppStore((s) => selectOfficeAgentProfile(s, id));
   const workspaceId = useAppStore((s) => s.workspaces.activeId);
   const setOfficeAgentProfiles = useAppStore((s) => s.setOfficeAgentProfiles);
 
@@ -56,7 +57,7 @@ export default function AgentDetailLayout({ children, params }: AgentDetailLayou
   const refetchAgents = useCallback(async () => {
     if (!workspaceId) return;
     const res = await listAgentProfiles(workspaceId).catch(() => ({ agents: [] }));
-    setOfficeAgentProfiles(res.agents ?? []);
+    setOfficeAgentProfiles(workspaceId, res.agents ?? []);
   }, [workspaceId, setOfficeAgentProfiles]);
 
   // Fire once on mount to recover from stale SSR hydration.

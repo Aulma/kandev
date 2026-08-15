@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
 
 const state = {
   workspaces: { activeId: "ws-1" as string | null },
-  office: { inboxCount: 0 },
+  office: { inboxCountByWorkspaceId: {} as Record<string, number> },
 };
 let inOffice = false;
 let pathname = "/";
@@ -49,7 +49,7 @@ function renderNav(collapsed: boolean) {
 describe("AppSidebarPrimaryNav", () => {
   beforeEach(() => {
     state.workspaces.activeId = "ws-1";
-    state.office.inboxCount = 0;
+    state.office.inboxCountByWorkspaceId = {};
     inOffice = false;
     pathname = "/";
     mocks.openQuickChat.mockClear();

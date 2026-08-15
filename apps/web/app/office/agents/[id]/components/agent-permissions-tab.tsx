@@ -42,7 +42,7 @@ export function AgentPermissionsTab({ agent }: AgentPermissionsTabProps) {
       await updateAgentProfile(agent.id, {
         permissions: perms,
       } as Partial<AgentProfile>);
-      updateStore(agent.id, { permissions: perms });
+      updateStore(agent.workspaceId, agent.id, { permissions: perms });
       setDirty(false);
       toast.success(t("office:permissionsUpdated"));
     } catch (err) {

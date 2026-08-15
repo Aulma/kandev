@@ -3,6 +3,7 @@
 import { IconHome, IconInbox, IconMessageCircle } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { useAppStore } from "@/components/state-provider";
+import { selectOfficeInboxCount } from "@/lib/state/slices/office/selectors";
 import { useInOffice } from "@/hooks/use-in-office";
 import { useQuickChatLauncher } from "@/hooks/use-quick-chat-launcher";
 import { linkToTaskOverview } from "@/lib/links";
@@ -16,7 +17,7 @@ type AppSidebarPrimaryNavProps = {
 export function AppSidebarPrimaryNav({ collapsed }: AppSidebarPrimaryNavProps) {
   const { t } = useTranslation();
   const workspaceId = useAppStore((s) => s.workspaces.activeId);
-  const inboxCount = useAppStore((s) => s.office.inboxCount);
+  const inboxCount = useAppStore(selectOfficeInboxCount);
   const inOffice = useInOffice();
   const handleOpenQuickChat = useQuickChatLauncher(workspaceId);
 

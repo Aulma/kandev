@@ -11,6 +11,10 @@ import {
 } from "@tabler/icons-react";
 import { Card } from "@kandev/ui/card";
 import { useAppStore } from "@/components/state-provider";
+import {
+  selectOfficeAgentProfiles,
+  selectOfficeDashboard,
+} from "@/lib/state/slices/office/selectors";
 import { useOfficeRefetch } from "@/hooks/use-office-refetch";
 import * as officeApi from "@/lib/api/domains/office-api";
 import { normalizeActivityEntry } from "@/lib/api/domains/office-activity-normalize";
@@ -224,8 +228,8 @@ function SubscriptionUsageCard({ agents }: { agents: AgentProfile[] }) {
 export function OfficePageClient({ initialDashboard }: OfficePageClientProps) {
   const { t } = useTranslation();
   const workspaceId = useAppStore((s) => s.workspaces.activeId);
-  const dashboard = useAppStore((s) => s.office.dashboard);
-  const agents = useAppStore((s) => s.office.agentProfiles);
+  const dashboard = useAppStore(selectOfficeDashboard);
+  const agents = useAppStore(selectOfficeAgentProfiles);
   const setDashboard = useAppStore((s) => s.setDashboard);
   const dashboardWorkspaceIdRef = useRef<string | null>(
     (dashboard || initialDashboard) && workspaceId ? workspaceId : null,
@@ -236,15 +240,14 @@ export function OfficePageClient({ initialDashboard }: OfficePageClientProps) {
   // fetch removes a redundant round-trip when SSR data is already in the
   // store (Stream G of office optimization).
   useEffect(() => {
-    if (initialDashboard) {
-      setDashboard(initialDashboard);
-    }
-  }, [initialDashboard, setDashboard]);
+    if (!workspaceId || !initialDashboard) return;
+    setDashboard(workspaceId, initialDashboard);
+  }, [initialDashboard, setDashboard, workspaceId]);
 
   const fetchDashboard = useCallback(async () => {
     if (!workspaceId) return;
     const data = await officeApi.getDashboard(workspaceId);
-    setDashboard(data);
+    setDashboard(workspaceId, data);
     dashboardWorkspaceIdRef.current = workspaceId;
   }, [workspaceId, setDashboard]);
 

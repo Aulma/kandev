@@ -6,6 +6,7 @@ import { Tabs, TabsList, TabsTrigger } from "@kandev/ui/tabs";
 import { Input } from "@kandev/ui/input";
 import { toast } from "@/lib/toast/sonner";
 import { useAppStore } from "@/components/state-provider";
+import { selectOfficeInboxItems } from "@/lib/state/slices/office/selectors";
 import { useOfficeRefetch } from "@/hooks/use-office-refetch";
 import * as officeApi from "@/lib/api/domains/office-api";
 import type { InboxItem } from "@/lib/state/slices/office/types";
@@ -25,9 +26,10 @@ function useInboxData(workspaceId: string | null, initialItems: InboxItem[], ini
   const setOfficeAgentProfiles = useAppStore((s) => s.setOfficeAgentProfiles);
 
   useEffect(() => {
-    if (initialItems.length > 0) setInboxItems(initialItems);
-    if (initialCount > 0) setInboxCount(initialCount);
-  }, [initialItems, initialCount, setInboxItems, setInboxCount]);
+    if (!workspaceId) return;
+    if (initialItems.length > 0) setInboxItems(workspaceId, initialItems);
+    if (initialCount > 0) setInboxCount(workspaceId, initialCount);
+  }, [initialItems, initialCount, setInboxItems, setInboxCount, workspaceId]);
 
   const fetchInbox = useCallback(async () => {
     if (!workspaceId) return;
@@ -40,10 +42,10 @@ function useInboxData(workspaceId: string | null, initialItems: InboxItem[], ini
       officeApi.listAgentProfiles(workspaceId),
     ]);
     const items = inboxRes.items ?? [];
-    setInboxItems(items);
-    setInboxCount(inboxRes.total_count ?? items.length);
+    setInboxItems(workspaceId, items);
+    setInboxCount(workspaceId, inboxRes.total_count ?? items.length);
     if (Array.isArray(agentsRes.agents)) {
-      setOfficeAgentProfiles(agentsRes.agents);
+      setOfficeAgentProfiles(workspaceId, agentsRes.agents);
     }
   }, [workspaceId, setInboxItems, setInboxCount, setOfficeAgentProfiles]);
 
@@ -128,7 +130,7 @@ function InboxToolbar({
 export function InboxPageClient({ initialItems, initialCount }: InboxPageClientProps) {
   const { t } = useTranslation();
   const workspaceId = useAppStore((s) => s.workspaces.activeId);
-  const inboxItems = useAppStore((s) => s.office.inboxItems);
+  const inboxItems = useAppStore(selectOfficeInboxItems);
   const [tab, setTab] = useState<TabValue>("mine");
   const [search, setSearch] = useState("");
 

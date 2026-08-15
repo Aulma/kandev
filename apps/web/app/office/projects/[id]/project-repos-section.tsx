@@ -28,13 +28,13 @@ export function ProjectReposSection({ project }: ProjectReposSectionProps) {
     async (next: string[], successKey: string, failureKey: string) => {
       try {
         await updateProject(project.id, { repositories: next });
-        updateProjectStore(project.id, { repositories: next });
+        updateProjectStore(project.workspaceId, project.id, { repositories: next });
         toast.success(t(successKey));
       } catch (err) {
         toast.error(err instanceof Error ? err.message : t(failureKey));
       }
     },
-    [project.id, updateProjectStore, t],
+    [project.id, project.workspaceId, updateProjectStore, t],
   );
 
   const handleAdd = useCallback(

@@ -247,10 +247,8 @@ function useOfficeRouteBootstrap(
       store.getState().setMeta(metaResponse);
 
       if (!activeWorkspaceId) {
-        store.getState().setOfficeAgentProfiles([]);
-        store.getState().setProjects([]);
-        store.getState().setInboxItems([]);
-        store.getState().setInboxCount(0);
+        // Nothing to clear: the office collections are keyed by workspace id,
+        // so with no active workspace every selector already reads empty.
         setBootstrap({ complete: true, onboardingComplete });
         return;
       }
@@ -265,10 +263,10 @@ function useOfficeRouteBootstrap(
       ]);
       if (cancelled) return;
 
-      store.getState().setOfficeAgentProfiles(agentsResponse.agents);
-      store.getState().setProjects(projectsResponse.projects);
-      store.getState().setInboxItems(inboxResponse.items);
-      store.getState().setInboxCount(inboxResponse.total_count);
+      store.getState().setOfficeAgentProfiles(activeWorkspaceId, agentsResponse.agents);
+      store.getState().setProjects(activeWorkspaceId, projectsResponse.projects);
+      store.getState().setInboxItems(activeWorkspaceId, inboxResponse.items);
+      store.getState().setInboxCount(activeWorkspaceId, inboxResponse.total_count);
       setBootstrap({ complete: true, onboardingComplete });
     }
 

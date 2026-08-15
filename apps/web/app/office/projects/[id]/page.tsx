@@ -8,6 +8,7 @@ import { Button } from "@kandev/ui/button";
 import { Separator } from "@kandev/ui/separator";
 import { toast } from "@/lib/toast/sonner";
 import { useAppStore } from "@/components/state-provider";
+import { selectOfficeProjects } from "@/lib/state/slices/office/selectors";
 import { getProject, deleteProject } from "@/lib/api/domains/office-api";
 import type { Project } from "@/lib/state/slices/office/types";
 import { OfficeTopbarPortal } from "../../components/office-topbar-portal";
@@ -26,7 +27,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const router = useRouter();
   const removeProject = useAppStore((s) => s.removeProject);
-  const storeProject = useAppStore((s) => s.office.projects.find((p) => p.id === id));
+  const storeProject = useAppStore((s) => selectOfficeProjects(s).find((p) => p.id === id));
   const [fetchedProject, setFetchedProject] = useState<Project | null>(null);
   const project = storeProject ?? fetchedProject;
 
@@ -51,7 +52,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
     if (!project) return;
     try {
       await deleteProject(project.id);
-      removeProject(project.id);
+      removeProject(project.workspaceId, project.id);
       toast.success(t("office:projectDeleted"));
       router.push("/office/projects");
     } catch (err) {

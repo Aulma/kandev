@@ -4,6 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { IconPlus } from "@tabler/icons-react";
 import { Button } from "@kandev/ui/button";
 import { useAppStore } from "@/components/state-provider";
+import {
+  selectOfficeAgentProfiles,
+  selectOfficeProjects,
+} from "@/lib/state/slices/office/selectors";
 import { useOfficeRefetch } from "@/hooks/use-office-refetch";
 import { listProjects } from "@/lib/api/domains/office-api";
 import { agentProfileId as toAgentProfileId } from "@/lib/types/ids";
@@ -19,8 +23,8 @@ type ProjectsPageClientProps = {
 
 export function ProjectsPageClient({ initialProjects }: ProjectsPageClientProps) {
   const { t } = useTranslation();
-  const projects = useAppStore((s) => s.office.projects);
-  const agents = useAppStore((s) => s.office.agentProfiles);
+  const projects = useAppStore(selectOfficeProjects);
+  const agents = useAppStore(selectOfficeAgentProfiles);
   const setProjects = useAppStore((s) => s.setProjects);
   const activeWorkspaceId = useAppStore((s) => s.workspaces.activeId);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -30,16 +34,15 @@ export function ProjectsPageClient({ initialProjects }: ProjectsPageClientProps)
   // redundant round-trip when SSR data is already in the store
   // (Stream G of office optimization).
   useEffect(() => {
-    if (initialProjects.length > 0) {
-      setProjects(initialProjects);
-    }
-  }, [initialProjects, setProjects]);
+    if (!activeWorkspaceId || initialProjects.length === 0) return;
+    setProjects(activeWorkspaceId, initialProjects);
+  }, [initialProjects, setProjects, activeWorkspaceId]);
 
   const loadProjects = useCallback(async () => {
     if (!activeWorkspaceId) return;
     try {
       const res = await listProjects(activeWorkspaceId);
-      setProjects(res?.projects ?? []);
+      setProjects(activeWorkspaceId, res?.projects ?? []);
     } catch {
       // Silently handle fetch errors
     }
