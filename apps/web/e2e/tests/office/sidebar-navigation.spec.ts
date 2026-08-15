@@ -89,7 +89,7 @@ test.describe("Sidebar Home destination", () => {
     // Carries the workspace id: Home resolves through the same rule as the
     // sidebar brand link, so the two are byte-identical rather than one
     // naming the workspace and the other not.
-    await expect(testPage).toHaveURL(/\/office(\?workspaceId=.+)?$/);
+    await expect(testPage).toHaveURL(/\/office\?workspaceId=.+$/);
     // "Agents Enabled" is the stable dashboard metric marker.
     await expect(testPage.getByText("Agents Enabled")).toBeVisible({ timeout: 10_000 });
   });

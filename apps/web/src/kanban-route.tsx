@@ -112,6 +112,13 @@ function useKanbanRouteBootstrap(route: KanbanRouteSelection, skip: boolean) {
 
       if (!activeWorkspaceId) return;
 
+      // The mismatch redirect above takes over once an Office workspace is
+      // hydrated as active, so the board data below would be fetched for a
+      // view that never renders.
+      if (isOfficeWorkspace(workspaceItems.find((item) => item.id === activeWorkspaceId))) {
+        return;
+      }
+
       const [workflowsResponse, repositoriesResponse] = await Promise.all([
         listWorkflows(activeWorkspaceId, { cache: "no-store", includeHidden: true }).catch(() => ({
           workflows: [],

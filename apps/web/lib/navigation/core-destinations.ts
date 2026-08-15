@@ -33,7 +33,7 @@ import {
   IconTicket,
 } from "@tabler/icons-react";
 import { AzureDevOpsIcon } from "@/components/icons/azure-devops-icon";
-import { linkToTaskOverview, linkToTasks } from "@/lib/links";
+import { linkToOfficeHome, linkToTaskOverview, linkToTasks } from "@/lib/links";
 import { EVERYWHERE, MENU_AND_PALETTE, SIDEBAR_AND_MENU } from "./surface-policy";
 import type { Destination, NavContext } from "./types";
 
@@ -45,10 +45,7 @@ import type { Destination, NavContext } from "./types";
  */
 export function homeDestinationHref(ctx: NavContext): string {
   if (!ctx.inOffice) return linkToTaskOverview({ workspaceId: ctx.workspaceId ?? undefined });
-  // Byte-identical to `workspaceHomeHref` for the same workspace: the sidebar
-  // brand link uses that one, while the Home row and the topbar's home crumb
-  // use this one, and they render side by side.
-  return ctx.workspaceId ? `/office?workspaceId=${ctx.workspaceId}` : "/office";
+  return linkToOfficeHome({ workspaceId: ctx.workspaceId ?? undefined });
 }
 
 /**

@@ -45,7 +45,15 @@ export function WorkspaceScopeProvider({
   workspaceId,
 }: {
   children: ReactNode;
-  /** Scope to a specific workspace. Omit to follow the store's active one. */
+  /**
+   * Scope to a specific workspace. Omit to follow the store's active one.
+   *
+   * Scopes the MODE only, today: the office collections and their loaders
+   * still resolve against the store's active workspace. Making the data
+   * follow this scope is the remaining piece of the side-by-side layout —
+   * do not pass a workspace other than the active one expecting isolated
+   * data underneath.
+   */
   workspaceId?: string;
 }) {
   const activeWorkspace = useAppStore(selectActiveWorkspace);

@@ -1,4 +1,4 @@
-import { linkToTaskOverview } from "@/lib/links";
+import { linkToOfficeHome, linkToTaskOverview } from "@/lib/links";
 import {
   ACTIVE_WORKSPACE_COOKIE,
   LEGACY_OFFICE_ACTIVE_WORKSPACE_COOKIE,
@@ -10,7 +10,7 @@ const ACTIVE_WORKSPACE_COOKIE_MAX_AGE = 31536000;
 export function workspaceHomeHref(workspace: ModeWorkspace | undefined): string {
   if (!workspace) return linkToTaskOverview();
   if (!isOfficeWorkspace(workspace)) return linkToTaskOverview({ workspaceId: workspace.id });
-  return `/office?workspaceId=${workspace.id}`;
+  return linkToOfficeHome({ workspaceId: workspace.id });
 }
 
 /**
