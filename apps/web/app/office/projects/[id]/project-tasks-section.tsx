@@ -10,11 +10,11 @@ import { useTranslation } from "react-i18next";
 
 type ProjectTasksSectionProps = {
   projectId: string;
+  workspaceId: string;
 };
 
-export function ProjectTasksSection({ projectId }: ProjectTasksSectionProps) {
+export function ProjectTasksSection({ projectId, workspaceId }: ProjectTasksSectionProps) {
   const { t } = useTranslation();
-  const workspaceId = useAppStore((s) => s.workspaces.activeId);
   const appendTasks = useAppStore((s) => s.appendTasks);
   // Select stable references; derive the filtered list and the agent-name
   // lookup via useMemo. Returning a freshly `.filter()`'d array or a

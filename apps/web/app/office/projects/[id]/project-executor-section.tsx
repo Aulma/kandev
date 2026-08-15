@@ -119,7 +119,6 @@ function buildConfig(input: {
 export function ProjectExecutorSection({ project }: ProjectExecutorSectionProps) {
   const { t } = useTranslation();
   const updateProjectStore = useAppStore((s) => s.updateProject);
-  const workspaceId = useAppStore((s) => s.workspaces.activeId);
   const config = project.executorConfig ?? {};
 
   const [executorType, setExecutorType] = useState((config.type as string) ?? "");
@@ -140,10 +139,7 @@ export function ProjectExecutorSection({ project }: ProjectExecutorSectionProps)
     try {
       const newConfig = buildConfig({ executorType, image, memoryMb, cpuCores, isContainer });
       await updateProject(project.id, { executorConfig: newConfig });
-      // Not `project.workspaceId` — API-loaded rows do not carry it (see `Project`).
-      if (workspaceId) {
-        updateProjectStore(workspaceId, project.id, { executorConfig: newConfig });
-      }
+      updateProjectStore(project.workspaceId, project.id, { executorConfig: newConfig });
       setDirty(false);
       toast.success(t("office:executorConfigurationSaved"));
     } catch (err) {
@@ -161,7 +157,7 @@ export function ProjectExecutorSection({ project }: ProjectExecutorSectionProps)
     isContainer,
     project.id,
     updateProjectStore,
-    workspaceId,
+    project.workspaceId,
   ]);
 
   return (

@@ -70,11 +70,9 @@ export function AppShell({ children }: AppShellProps) {
                 <RecentTaskSwitcher />
                 <ConfigChatProvider>
                   <QuickChatProvider>
-                    {/* The one scope for the whole app today: everything below
-                        follows the active workspace, and Office-vs-kanban
-                        chrome is derived from it rather than from the URL. Two
-                        panes showing different workspaces in one tab would be
-                        two providers, with no change to the consumers. */}
+                    {/* The one scope for the whole app: everything below follows
+                        the active workspace, and Office-vs-kanban chrome comes
+                        from it rather than from the URL. */}
                     <WorkspaceScopeProvider>
                       <div className="flex h-dvh min-h-0 w-full overflow-hidden">
                         <AppSidebar />

@@ -19,13 +19,10 @@ function Probe() {
   return <span data-testid="scope">{`${mode}:${workspaceId ?? "none"}`}</span>;
 }
 
-function renderScope(
-  initialState: Partial<AppState>,
-  props: { workspaceId?: string } = {},
-): string {
+function renderScope(initialState: Partial<AppState>): string {
   render(
     <StateProvider initialState={initialState}>
-      <WorkspaceScopeProvider {...props}>
+      <WorkspaceScopeProvider>
         <Probe />
       </WorkspaceScopeProvider>
     </StateProvider>,
@@ -54,27 +51,9 @@ describe("WorkspaceScopeProvider", () => {
     expect(renderScope({ workspaces: { items: [], activeId: OFFICE.id } })).toBe("unknown:none");
   });
 
-  it("scopes to an explicitly named workspace instead of the active one", () => {
-    // The seam the side-by-side layout needs: two providers, two workspaces,
-    // one store. Consumers below each one are unchanged.
-    expect(
-      renderScope(
-        { workspaces: { items: [KANBAN, OFFICE], activeId: KANBAN.id } },
-        {
-          workspaceId: OFFICE.id,
-        },
-      ),
-    ).toBe("office:office-1");
-  });
-
-  it("resolves rather than holds when a populated list lacks the named workspace", () => {
-    expect(
-      renderScope(
-        { workspaces: { items: [KANBAN], activeId: KANBAN.id } },
-        {
-          workspaceId: "deleted-workspace",
-        },
-      ),
-    ).toBe("kanban:none");
+  it("resolves a populated list with no active workspace without showing Office mode", () => {
+    expect(renderScope({ workspaces: { items: [KANBAN], activeId: "deleted-workspace" } })).toBe(
+      "kanban:none",
+    );
   });
 });

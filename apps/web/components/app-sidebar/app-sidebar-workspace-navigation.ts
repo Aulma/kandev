@@ -1,17 +1,12 @@
-import { linkToOfficeHome, linkToTaskOverview } from "@/lib/links";
 import {
   ACTIVE_WORKSPACE_COOKIE,
   LEGACY_OFFICE_ACTIVE_WORKSPACE_COOKIE,
 } from "@/lib/routing/route-bootstrap";
 import { isOfficeWorkspace, type ModeWorkspace } from "@/lib/state/slices/workspace/selectors";
 
-const ACTIVE_WORKSPACE_COOKIE_MAX_AGE = 31536000;
+export { workspaceHomeHref } from "@/lib/navigation/workspace-home";
 
-export function workspaceHomeHref(workspace: ModeWorkspace | undefined): string {
-  if (!workspace) return linkToTaskOverview();
-  if (!isOfficeWorkspace(workspace)) return linkToTaskOverview({ workspaceId: workspace.id });
-  return linkToOfficeHome({ workspaceId: workspace.id });
-}
+const ACTIVE_WORKSPACE_COOKIE_MAX_AGE = 31536000;
 
 /**
  * Records a workspace as the active one — one write per workspace change.

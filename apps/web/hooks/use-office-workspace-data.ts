@@ -1,11 +1,89 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect } from "react";
 import { useAppStore, useAppStoreApi } from "@/components/state-provider";
 import { useFeature } from "@/hooks/domains/features/use-feature";
 import { useOfficeRefetch } from "@/hooks/use-office-refetch";
 import { getInbox, getMeta, listAgentProfiles, listProjects } from "@/lib/api/domains/office-api";
+import type { ApiRequestOptions } from "@/lib/api/client";
+import type { AppState } from "@/lib/state/store";
 import { isOfficeWorkspace, selectActiveWorkspace } from "@/lib/state/slices/workspace/selectors";
+import type { StoreApi } from "zustand";
+
+type OfficeStore = StoreApi<AppState>;
+
+const requestSequences = new WeakMap<OfficeStore, Map<string, number>>();
+
+function nextRequestSequence(store: OfficeStore, key: string): number {
+  let sequences = requestSequences.get(store);
+  if (!sequences) {
+    sequences = new Map();
+    requestSequences.set(store, sequences);
+  }
+  const next = (sequences.get(key) ?? 0) + 1;
+  sequences.set(key, next);
+  return next;
+}
+
+function isLatestRequest(store: OfficeStore, key: string, sequence: number): boolean {
+  return requestSequences.get(store)?.get(key) === sequence;
+}
+
+/**
+ * Loads one workspace's agents and writes only the newest result for that
+ * store and workspace. All Office consumers use this function so page-level
+ * refreshes cannot overwrite a newer sidebar request.
+ */
+export async function loadOfficeAgents(
+  store: OfficeStore,
+  workspaceId: string,
+  options?: ApiRequestOptions,
+): Promise<void> {
+  const key = `agents:${workspaceId}`;
+  const sequence = nextRequestSequence(store, key);
+  const response = await listAgentProfiles(workspaceId, options).catch(() => null);
+  if (!response || !isLatestRequest(store, key, sequence)) return;
+  store.getState().setOfficeAgentProfiles(workspaceId, response.agents ?? []);
+}
+
+/** Loads one workspace's projects with shared stale-response protection. */
+export async function loadOfficeProjects(
+  store: OfficeStore,
+  workspaceId: string,
+  options?: ApiRequestOptions,
+): Promise<void> {
+  const key = `projects:${workspaceId}`;
+  const sequence = nextRequestSequence(store, key);
+  const response = await listProjects(workspaceId, options).catch(() => null);
+  if (!response || !isLatestRequest(store, key, sequence)) return;
+  store.getState().setProjects(workspaceId, response.projects ?? []);
+}
+
+/** Loads one workspace's inbox with shared stale-response protection. */
+export async function loadOfficeInbox(
+  store: OfficeStore,
+  workspaceId: string,
+  options?: ApiRequestOptions,
+): Promise<void> {
+  const key = `inbox:${workspaceId}`;
+  const sequence = nextRequestSequence(store, key);
+  const response = await getInbox(workspaceId, options).catch(() => null);
+  if (!response || !isLatestRequest(store, key, sequence)) return;
+  const items = response.items ?? [];
+  store.getState().setInboxItems(workspaceId, items);
+  store.getState().setInboxCount(workspaceId, response.total_count ?? items.length);
+}
+
+/** Loads instance-wide Office metadata with the same newest-request rule. */
+export async function loadOfficeMeta(
+  store: OfficeStore,
+  options?: ApiRequestOptions,
+): Promise<void> {
+  const sequence = nextRequestSequence(store, "meta");
+  const response = await getMeta(options).catch(() => null);
+  if (!response || !isLatestRequest(store, "meta", sequence)) return;
+  store.getState().setMeta(response);
+}
 
 /**
  * Loads the office collections the always-mounted chrome reads — agents,
@@ -33,75 +111,37 @@ export function useOfficeWorkspaceData(): void {
       ? activeWorkspace.id
       : null;
 
-  // Request sequencing is per resource AND per workspace. Two loads of the same
-  // resource for the same workspace resolving out of order must let the newer
-  // one win. Everything else is independent: sharing a counter across resources
-  // would make the three parallel loads cancel each other, and sharing one
-  // across workspaces would drop a workspace's data the moment another started
-  // loading — leaving it stale when you switch back. Keying is what makes the
-  // cross-workspace case safe: a late response lands under its own key, correct
-  // and simply unread.
-  const seqRef = useRef<Record<string, number>>({});
-  const nextSeq = useCallback((key: string) => {
-    const next = (seqRef.current[key] ?? 0) + 1;
-    seqRef.current[key] = next;
-    return next;
-  }, []);
-  const isLatest = useCallback((key: string, seq: number) => seqRef.current[key] === seq, []);
-
   // A failed refresh is a no-write: this hook refreshes data other surfaces
   // already hydrated, so writing a fallback on rejection would blank the last
   // known-good agents, projects, or inbox badge over a transient error.
   const loadAgents = useCallback(async () => {
     if (!workspaceId) return;
-    const key = `agents:${workspaceId}`;
-    const seq = nextSeq(key);
-    const res = await listAgentProfiles(workspaceId, { cache: "no-store" }).catch(() => null);
-    if (!res || !isLatest(key, seq)) return;
-    store.getState().setOfficeAgentProfiles(workspaceId, res.agents ?? []);
-  }, [isLatest, nextSeq, store, workspaceId]);
+    await loadOfficeAgents(store, workspaceId, { cache: "no-store" });
+  }, [store, workspaceId]);
 
   const loadProjects = useCallback(async () => {
     if (!workspaceId) return;
-    const key = `projects:${workspaceId}`;
-    const seq = nextSeq(key);
-    const res = await listProjects(workspaceId, { cache: "no-store" }).catch(() => null);
-    if (!res || !isLatest(key, seq)) return;
-    store.getState().setProjects(workspaceId, res.projects ?? []);
-  }, [isLatest, nextSeq, store, workspaceId]);
+    await loadOfficeProjects(store, workspaceId, { cache: "no-store" });
+  }, [store, workspaceId]);
 
   const loadInbox = useCallback(async () => {
     if (!workspaceId) return;
-    const key = `inbox:${workspaceId}`;
-    const seq = nextSeq(key);
-    const res = await getInbox(workspaceId, { cache: "no-store" }).catch(() => null);
-    if (!res || !isLatest(key, seq)) return;
-    const items = res.items ?? [];
-    store.getState().setInboxItems(workspaceId, items);
-    store.getState().setInboxCount(workspaceId, res.total_count ?? items.length);
-  }, [isLatest, nextSeq, store, workspaceId]);
+    await loadOfficeInbox(store, workspaceId, { cache: "no-store" });
+  }, [store, workspaceId]);
 
   useEffect(() => {
     if (!workspaceId) return;
-    let cancelled = false;
 
     async function load() {
-      // `meta` is instance-wide rather than per-workspace, so it is fetched
-      // once alongside the first workspace load and never keyed.
-      const [, , , meta] = await Promise.all([
+      await Promise.all([
         loadAgents(),
         loadProjects(),
         loadInbox(),
-        getMeta({ cache: "no-store" }).catch(() => null),
+        loadOfficeMeta(store, { cache: "no-store" }),
       ]);
-      if (cancelled || !meta) return;
-      store.getState().setMeta(meta);
     }
 
     void load();
-    return () => {
-      cancelled = true;
-    };
   }, [loadAgents, loadInbox, loadProjects, store, workspaceId]);
 
   // The same WS triggers the office pages listen to, so a change made in one

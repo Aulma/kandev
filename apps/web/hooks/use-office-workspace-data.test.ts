@@ -44,10 +44,11 @@ const storeState = {
   setInboxCount,
   setMeta,
 };
+const storeApi = { getState: () => storeState };
 
 vi.mock("@/components/state-provider", () => ({
   useAppStore: (selector: (s: typeof storeState) => unknown) => selector(storeState),
-  useAppStoreApi: () => ({ getState: () => storeState }),
+  useAppStoreApi: () => storeApi,
 }));
 
 vi.mock("@/hooks/domains/features/use-feature", () => ({

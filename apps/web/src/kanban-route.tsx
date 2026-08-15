@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { PageClient } from "@/app/page-client";
 import { useAppStore, useAppStoreApi } from "@/components/state-provider";
-import { workspaceHomeHref } from "@/components/app-sidebar/app-sidebar-workspace-navigation";
+import { workspaceHomeHref } from "@/lib/navigation/workspace-home";
 import { useFeature } from "@/hooks/domains/features/use-feature";
 import { fetchUserSettings } from "@/lib/api/domains/settings-api";
 import { listWorkflows } from "@/lib/api/domains/kanban-api";
@@ -60,8 +61,9 @@ export function resolveKanbanRouteWorkspaceId(
 function useKanbanWorkspaceMismatchRedirect(route: KanbanRouteSelection): string | null {
   const router = useRouter();
   const officeEnabled = useFeature("office");
-  const workspaceItems = useAppStore((state) => state.workspaces.items);
-  const activeWorkspaceId = useAppStore((state) => state.workspaces.activeId);
+  const { items: workspaceItems, activeId: activeWorkspaceId } = useAppStore(
+    useShallow((state) => state.workspaces),
+  );
   const targetId = route.workspaceId ?? activeWorkspaceId;
   const targetWorkspace = workspaceItems.find((workspace) => workspace.id === targetId);
   // With the feature off there is no Office surface to send anyone to, so an

@@ -1,14 +1,12 @@
 "use client";
 
-import { use, useCallback, useEffect, type ReactNode } from "react";
+import { use, type ReactNode } from "react";
 import Link from "@/components/routing/app-link";
 import { usePathname } from "@/lib/routing/client-router";
 import { IconInfoCircle } from "@tabler/icons-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@kandev/ui/tooltip";
 import { useAppStore } from "@/components/state-provider";
 import { selectOfficeAgentProfile } from "@/lib/state/slices/office/selectors";
-import { useOfficeRefetch } from "@/hooks/use-office-refetch";
-import { listAgentProfiles } from "@/lib/api/domains/office-api";
 import { cn } from "@/lib/utils";
 import { OfficeTopbarPortal } from "../../components/office-topbar-portal";
 import { AgentAvatar } from "../../components/agent-avatar";
@@ -48,26 +46,6 @@ export default function AgentDetailLayout({ children, params }: AgentDetailLayou
   const { id } = use(params);
   const pathname = usePathname();
   const agent = useAppStore((s) => selectOfficeAgentProfile(s, id));
-  const workspaceId = useAppStore((s) => s.workspaces.activeId);
-  const setOfficeAgentProfiles = useAppStore((s) => s.setOfficeAgentProfiles);
-
-  // Refetch the agents list on mount and on WS "agents" events so this
-  // layout recovers when SSR hydrated the store with a stale agent set
-  // (e.g. the agent was created after the SSR fetch fired).
-  const refetchAgents = useCallback(async () => {
-    if (!workspaceId) return;
-    // A failed refresh keeps the last known-good list rather than blanking it.
-    const res = await listAgentProfiles(workspaceId).catch(() => null);
-    if (!res) return;
-    setOfficeAgentProfiles(workspaceId, res.agents ?? []);
-  }, [workspaceId, setOfficeAgentProfiles]);
-
-  // Fire once on mount to recover from stale SSR hydration.
-  useEffect(() => {
-    refetchAgents();
-  }, [refetchAgents]);
-
-  useOfficeRefetch("agents", refetchAgents);
 
   const activeSlug = activeSlugFromPath(pathname, id);
 

@@ -12,7 +12,7 @@ type AppNavSheetProps = {
    * tree on /settings, Office's sections on /office. Phone users get the
    * page's own nav plus the app-wide destinations in one place.
    */
-  pageNav?: ReactNode;
+  pageNav?: ReactNode | ((close: () => void) => ReactNode);
   /** Manifest destination ids `pageNav` already covers. See `AppNavSections`. */
   omitDestinations?: string[];
 };
@@ -27,6 +27,7 @@ export function AppNavSheet({ pageNav, omitDestinations }: AppNavSheetProps) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
   const controls = useAppNavDialogs(close);
+  const renderedPageNav = typeof pageNav === "function" ? pageNav(close) : pageNav;
 
   // pageNav trees (SettingsTree, Office sections) render plain links that
   // don't know about this sheet; close on any link click so navigation isn't
@@ -54,7 +55,7 @@ export function AppNavSheet({ pageNav, omitDestinations }: AppNavSheetProps) {
             className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto overscroll-contain p-4"
             onClick={closeOnLinkClick}
           >
-            {pageNav}
+            {renderedPageNav}
             <AppNavSections
               onNavigate={close}
               omitDestinations={omitDestinations}

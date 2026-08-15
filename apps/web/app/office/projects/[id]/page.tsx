@@ -27,18 +27,22 @@ export default function ProjectDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const router = useRouter();
   const removeProject = useAppStore((s) => s.removeProject);
-  // Not `project.workspaceId` — API-loaded rows do not carry it (see `Project`).
   const activeWorkspaceId = useAppStore((s) => s.workspaces.activeId);
   const storeProject = useAppStore((s) => selectOfficeProjects(s).find((p) => p.id === id));
   const [fetchedProject, setFetchedProject] = useState<Project | null>(null);
-  const project = storeProject ?? fetchedProject;
+  const project =
+    storeProject ?? (fetchedProject?.workspaceId === activeWorkspaceId ? fetchedProject : null);
 
   useEffect(() => {
-    if (storeProject) return;
+    setFetchedProject(null);
+  }, [activeWorkspaceId, id]);
+
+  useEffect(() => {
+    if (!activeWorkspaceId || storeProject) return;
     let cancelled = false;
     getProject(id)
       .then((res) => {
-        if (!cancelled && res) setFetchedProject(res as unknown as Project);
+        if (!cancelled && res.workspaceId === activeWorkspaceId) setFetchedProject(res);
       })
       .catch((err) => {
         if (!cancelled) {
@@ -48,13 +52,13 @@ export default function ProjectDetailPage({ params }: PageProps) {
     return () => {
       cancelled = true;
     };
-  }, [id, storeProject]);
+  }, [activeWorkspaceId, id, storeProject, t]);
 
   const handleDelete = async () => {
     if (!project) return;
     try {
       await deleteProject(project.id);
-      if (activeWorkspaceId) removeProject(activeWorkspaceId, project.id);
+      removeProject(project.workspaceId, project.id);
       toast.success(t("office:projectDeleted"));
       router.push("/office/projects");
     } catch (err) {
@@ -96,7 +100,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
 
         <Separator />
 
-        <ProjectTasksSection projectId={project.id} />
+        <ProjectTasksSection projectId={project.id} workspaceId={project.workspaceId} />
 
         <Separator />
 

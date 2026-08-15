@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { IconPlus } from "@tabler/icons-react";
 import { Button } from "@kandev/ui/button";
 import { useAppStore } from "@/components/state-provider";
@@ -8,8 +8,6 @@ import {
   selectOfficeAgentProfiles,
   selectOfficeProjects,
 } from "@/lib/state/slices/office/selectors";
-import { useOfficeRefetch } from "@/hooks/use-office-refetch";
-import { listProjects } from "@/lib/api/domains/office-api";
 import { agentProfileId as toAgentProfileId } from "@/lib/types/ids";
 import type { Project } from "@/lib/state/slices/office/types";
 import { ProjectCard } from "./project-card";
@@ -19,9 +17,13 @@ import { useTranslation } from "react-i18next";
 
 type ProjectsPageClientProps = {
   initialProjects: Project[];
+  initialWorkspaceId?: string | null;
 };
 
-export function ProjectsPageClient({ initialProjects }: ProjectsPageClientProps) {
+export function ProjectsPageClient({
+  initialProjects,
+  initialWorkspaceId,
+}: ProjectsPageClientProps) {
   const { t } = useTranslation();
   const projects = useAppStore(selectOfficeProjects);
   const agents = useAppStore(selectOfficeAgentProfiles);
@@ -34,25 +36,15 @@ export function ProjectsPageClient({ initialProjects }: ProjectsPageClientProps)
   // redundant round-trip when SSR data is already in the store
   // (Stream G of office optimization).
   useEffect(() => {
-    if (!activeWorkspaceId || initialProjects.length === 0) return;
-    setProjects(activeWorkspaceId, initialProjects);
-  }, [initialProjects, setProjects, activeWorkspaceId]);
-
-  const loadProjects = useCallback(async () => {
-    if (!activeWorkspaceId) return;
-    try {
-      const res = await listProjects(activeWorkspaceId);
-      setProjects(activeWorkspaceId, res?.projects ?? []);
-    } catch {
-      // Silently handle fetch errors
+    if (
+      !activeWorkspaceId ||
+      (initialWorkspaceId !== undefined && initialWorkspaceId !== activeWorkspaceId) ||
+      initialProjects.length === 0
+    ) {
+      return;
     }
-  }, [activeWorkspaceId, setProjects]);
-
-  useEffect(() => {
-    void loadProjects();
-  }, [loadProjects]);
-
-  useOfficeRefetch("projects", loadProjects);
+    setProjects(activeWorkspaceId, initialProjects);
+  }, [activeWorkspaceId, initialProjects, initialWorkspaceId, setProjects]);
 
   const agentNameMap = new Map(agents.map((a) => [a.id, a.name]));
 

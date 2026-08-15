@@ -10,7 +10,7 @@ const state = {
   workspaces: { activeId: "ws-1" as string | null },
   office: { inboxCountByWorkspaceId: {} as Record<string, number> },
 };
-let inOffice = false;
+let mode: "office" | "kanban" | "unknown" = "kanban";
 let pathname = "/";
 
 vi.mock("@/components/state-provider", () => ({
@@ -18,7 +18,7 @@ vi.mock("@/components/state-provider", () => ({
 }));
 
 vi.mock("@/hooks/use-in-office", () => ({
-  useInOffice: () => inOffice,
+  useOfficeModeState: () => mode,
 }));
 
 vi.mock("@/hooks/use-quick-chat-launcher", () => ({
@@ -50,7 +50,7 @@ describe("AppSidebarPrimaryNav", () => {
   beforeEach(() => {
     state.workspaces.activeId = "ws-1";
     state.office.inboxCountByWorkspaceId = {};
-    inOffice = false;
+    mode = "kanban";
     pathname = "/";
     mocks.openQuickChat.mockClear();
   });
@@ -92,5 +92,12 @@ describe("AppSidebarPrimaryNav", () => {
     const home = screen.getByRole("link", { name: "Home" });
     expect(home.getAttribute("href")).toBe("/?home=overview&workspaceId=ws-1");
     expect(home.className).toContain("before:bg-primary");
+  });
+
+  it("does not expose a Kanban Home link before workspace mode resolves", () => {
+    mode = "unknown";
+    renderNav(false);
+
+    expect(screen.queryByRole("link", { name: "Home" })).toBeNull();
   });
 });

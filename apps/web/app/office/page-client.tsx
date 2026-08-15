@@ -40,6 +40,7 @@ function formatMonthSpend(subcents: number): string {
 
 type OfficePageClientProps = {
   initialDashboard?: DashboardData | null;
+  initialWorkspaceId?: string | null;
 };
 
 const EMPTY_METRICS = {
@@ -225,7 +226,7 @@ function SubscriptionUsageCard({ agents }: { agents: AgentProfile[] }) {
   );
 }
 
-export function OfficePageClient({ initialDashboard }: OfficePageClientProps) {
+export function OfficePageClient({ initialDashboard, initialWorkspaceId }: OfficePageClientProps) {
   const { t } = useTranslation();
   const workspaceId = useAppStore((s) => s.workspaces.activeId);
   const dashboard = useAppStore(selectOfficeDashboard);
@@ -243,10 +244,17 @@ export function OfficePageClient({ initialDashboard }: OfficePageClientProps) {
   // workspace switch would file it under the new workspace.
   const initialDashboardHydratedRef = useRef(false);
   useEffect(() => {
-    if (initialDashboardHydratedRef.current || !workspaceId || !initialDashboard) return;
+    if (
+      initialDashboardHydratedRef.current ||
+      !workspaceId ||
+      !initialDashboard ||
+      (initialWorkspaceId !== undefined && initialWorkspaceId !== workspaceId)
+    ) {
+      return;
+    }
     initialDashboardHydratedRef.current = true;
     setDashboard(workspaceId, initialDashboard);
-  }, [initialDashboard, setDashboard, workspaceId]);
+  }, [initialDashboard, initialWorkspaceId, setDashboard, workspaceId]);
 
   const fetchDashboard = useCallback(async () => {
     if (!workspaceId) return;
