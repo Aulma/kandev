@@ -86,7 +86,10 @@ test.describe("Sidebar Home destination", () => {
     const home = testPage.getByRole("link", { name: "Home", exact: true });
     await expect(home).toBeVisible({ timeout: 15_000 });
     await home.click();
-    await expect(testPage).toHaveURL(/\/office$/);
+    // Carries the workspace id: Home resolves through the same rule as the
+    // sidebar brand link, so the two are byte-identical rather than one
+    // naming the workspace and the other not.
+    await expect(testPage).toHaveURL(/\/office(\?workspaceId=.+)?$/);
     // "Agents Enabled" is the stable dashboard metric marker.
     await expect(testPage.getByText("Agents Enabled")).toBeVisible({ timeout: 10_000 });
   });
@@ -114,19 +117,20 @@ test.describe("Sidebar Home destination", () => {
     await expect(testPage.getByText("Agents Enabled")).toBeVisible({ timeout: 15_000 });
   });
 
-  test("Home goes to the Kanban board when a kanban workspace is active", async ({
+  test("the kanban board redirects to Office when an office workspace is active", async ({
     testPage,
     officeSeed: _,
   }) => {
-    await testPage.goto("/");
-    const home = testPage.getByRole("link", { name: "Home", exact: true });
-    await expect(home).toBeVisible({ timeout: 15_000 });
-    await expect(home).toHaveAttribute("href", /^\/\?home=overview&workspaceId=.+$/);
+    // The other half of the same rule: the workspace decides, so asking for
+    // the kanban board while an Office workspace is active moves the URL to
+    // that workspace's Office home. It used to do the reverse — quietly
+    // activate some other workspace whose board it could render.
+    await testPage.goto("/office");
+    await expect(testPage.getByText("Agents Enabled")).toBeVisible({ timeout: 15_000 });
 
-    await home.click();
-    await expect(testPage).toHaveURL(
-      (url) => url.pathname === "/" && url.searchParams.get("home") === "overview",
-    );
-    await expect(testPage.getByTestId("kanban-board")).toBeVisible({ timeout: 15_000 });
+    await testPage.goto("/");
+
+    await expect(testPage).toHaveURL(/\/office(\?|$)/, { timeout: 15_000 });
+    await expect(testPage.getByText("Agents Enabled")).toBeVisible({ timeout: 15_000 });
   });
 });

@@ -100,6 +100,7 @@ function ContainerFields({
 export function ProjectExecutorSection({ project }: ProjectExecutorSectionProps) {
   const { t } = useTranslation();
   const updateProjectStore = useAppStore((s) => s.updateProject);
+  const workspaceId = useAppStore((s) => s.workspaces.activeId);
   const config = project.executorConfig ?? {};
 
   const [executorType, setExecutorType] = useState((config.type as string) ?? "");
@@ -128,7 +129,11 @@ export function ProjectExecutorSection({ project }: ProjectExecutorSectionProps)
         newConfig.resource_limits = limits;
       }
       await updateProject(project.id, { executorConfig: newConfig });
-      updateProjectStore(project.workspaceId, project.id, { executorConfig: newConfig });
+      // The active workspace, not `project.workspaceId` — API-loaded project
+      // rows do not carry it (see the `Project` type).
+      if (workspaceId) {
+        updateProjectStore(workspaceId, project.id, { executorConfig: newConfig });
+      }
       setDirty(false);
       toast.success(t("office:executorConfigurationSaved"));
     } catch (err) {

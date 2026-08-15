@@ -27,6 +27,9 @@ export default function ProjectDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const router = useRouter();
   const removeProject = useAppStore((s) => s.removeProject);
+  // The active workspace, not `project.workspaceId` — API-loaded project rows
+  // do not carry it (see the `Project` type).
+  const activeWorkspaceId = useAppStore((s) => s.workspaces.activeId);
   const storeProject = useAppStore((s) => selectOfficeProjects(s).find((p) => p.id === id));
   const [fetchedProject, setFetchedProject] = useState<Project | null>(null);
   const project = storeProject ?? fetchedProject;
@@ -52,7 +55,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
     if (!project) return;
     try {
       await deleteProject(project.id);
-      removeProject(project.workspaceId, project.id);
+      if (activeWorkspaceId) removeProject(activeWorkspaceId, project.id);
       toast.success(t("office:projectDeleted"));
       router.push("/office/projects");
     } catch (err) {

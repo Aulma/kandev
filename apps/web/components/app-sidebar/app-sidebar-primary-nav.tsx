@@ -6,7 +6,7 @@ import { useAppStore } from "@/components/state-provider";
 import { selectOfficeInboxCount } from "@/lib/state/slices/office/selectors";
 import { useInOffice } from "@/hooks/use-in-office";
 import { useQuickChatLauncher } from "@/hooks/use-quick-chat-launcher";
-import { linkToTaskOverview } from "@/lib/links";
+import { homeDestinationHref } from "@/lib/navigation/core-destinations";
 import { AppSidebarNavItem } from "./app-sidebar-nav-item";
 import { AppSidebarNewTaskItem } from "./app-sidebar-new-task-item";
 
@@ -26,7 +26,11 @@ export function AppSidebarPrimaryNav({ collapsed }: AppSidebarPrimaryNavProps) {
       <AppSidebarNavItem
         icon={IconHome}
         label={t("sidebar:home")}
-        href={inOffice ? "/office" : linkToTaskOverview({ workspaceId: workspaceId ?? undefined })}
+        // Through the shared rule rather than a local `inOffice ? "/office"`.
+        // That inline branch dropped the workspace id, so this row and the
+        // brand link two rows above it pointed at different URLs — the exact
+        // "two homes" disagreement the workspace-derived mode was meant to end.
+        href={homeDestinationHref({ workspaceId, inOffice })}
         collapsed={collapsed}
         exactMatch
       />

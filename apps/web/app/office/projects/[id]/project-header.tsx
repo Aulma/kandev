@@ -26,6 +26,9 @@ type ProjectHeaderProps = {
 export function ProjectHeader({ project }: ProjectHeaderProps) {
   const { t } = useTranslation();
   const updateProjectStore = useAppStore((s) => s.updateProject);
+  // The active workspace, not `project.workspaceId` — API-loaded project rows
+  // do not carry it (see the `Project` type).
+  const workspaceId = useAppStore((s) => s.workspaces.activeId);
 
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description ?? "");
@@ -43,7 +46,7 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
 
       if (Object.keys(patch).length > 0) {
         await updateProject(project.id, patch);
-        updateProjectStore(project.workspaceId, project.id, patch);
+        if (workspaceId) updateProjectStore(workspaceId, project.id, patch);
       }
       setDirty(false);
       toast.success(t("office:projectSaved"));

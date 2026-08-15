@@ -69,7 +69,14 @@ export type TaskCounts = {
 
 export type Project = {
   id: string;
-  workspaceId: string;
+  /**
+   * Absent on rows loaded from the API: the backend serialises this as
+   * `workspace_id` and the project endpoints do no camelCase mapping, unlike
+   * `AgentProfile`. Optional so callers are forced to notice — typed as a
+   * required `string` it read as always-present and silently resolved to
+   * `undefined` at runtime. Use the active workspace id instead.
+   */
+  workspaceId?: string;
   name: string;
   description?: string;
   status: ProjectStatus;

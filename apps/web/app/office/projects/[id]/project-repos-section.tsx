@@ -28,13 +28,18 @@ export function ProjectReposSection({ project }: ProjectReposSectionProps) {
     async (next: string[], successKey: string, failureKey: string) => {
       try {
         await updateProject(project.id, { repositories: next });
-        updateProjectStore(project.workspaceId, project.id, { repositories: next });
+        // The active workspace, not `project.workspaceId` — API-loaded rows
+        // do not carry it, and this page only ever shows a project belonging
+        // to the workspace currently selected.
+        if (workspaceId) {
+          updateProjectStore(workspaceId, project.id, { repositories: next });
+        }
         toast.success(t(successKey));
       } catch (err) {
         toast.error(err instanceof Error ? err.message : t(failureKey));
       }
     },
-    [project.id, project.workspaceId, updateProjectStore, t],
+    [project.id, workspaceId, updateProjectStore, t],
   );
 
   const handleAdd = useCallback(

@@ -31,8 +31,10 @@ test.describe("Sidebar workspace mode navigation", () => {
       "href",
       `/?home=overview&workspaceId=${kanbanWorkspace.id}`,
     );
-    await expect(sidebar.root.getByRole("button", { name: "Office" })).toBeVisible();
-    await sidebar.root.getByRole("button", { name: "Office" }).click();
+    // By testid, not label: the toggle names its destination workspace now
+    // ("Switch to <workspace>") rather than the mode.
+    await expect(sidebar.root.getByTestId("sidebar-office-button")).toBeVisible();
+    await sidebar.root.getByTestId("sidebar-office-button").click();
 
     await expect(testPage).toHaveURL(
       (url) =>
@@ -45,8 +47,8 @@ test.describe("Sidebar workspace mode navigation", () => {
       "href",
       `/office?workspaceId=${officeSeed.workspaceId}`,
     );
-    await expect(sidebar.root.getByRole("button", { name: "Kanban" })).toBeVisible();
-    await sidebar.root.getByRole("button", { name: "Kanban" }).click();
+    await expect(sidebar.root.getByTestId("sidebar-kanban-button")).toBeVisible();
+    await sidebar.root.getByTestId("sidebar-kanban-button").click();
 
     await expect(testPage).toHaveURL(
       (url) =>
