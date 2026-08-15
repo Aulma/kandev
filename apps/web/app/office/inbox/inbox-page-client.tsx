@@ -8,7 +8,7 @@ import { toast } from "@/lib/toast/sonner";
 import { useAppStore, useAppStoreApi } from "@/components/state-provider";
 import { selectOfficeInboxItems } from "@/lib/state/slices/office/selectors";
 import * as officeApi from "@/lib/api/domains/office-api";
-import { loadOfficeInbox } from "@/hooks/use-office-workspace-data";
+import { loadOfficeAgents, loadOfficeInbox } from "@/hooks/use-office-workspace-data";
 import type { InboxItem } from "@/lib/state/slices/office/types";
 import { InboxItemRow } from "./inbox-item-row";
 import { useTranslation } from "react-i18next";
@@ -25,7 +25,12 @@ function useInboxData(workspaceId: string | null) {
   const store = useAppStoreApi();
   return useCallback(async () => {
     if (!workspaceId) return;
-    await loadOfficeInbox(store, workspaceId, { cache: "no-store" });
+    // Mark-fixed changes both the inbox row and the agent pause state. Refresh
+    // both workspace-owned caches through the shared loaders.
+    await Promise.all([
+      loadOfficeInbox(store, workspaceId, { cache: "no-store" }),
+      loadOfficeAgents(store, workspaceId, { cache: "no-store" }),
+    ]);
   }, [store, workspaceId]);
 }
 
