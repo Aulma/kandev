@@ -24,9 +24,8 @@ import { CurrentUserChip } from "./current-user-chip";
 import { linkToTask } from "@/lib/links";
 import { cn } from "@/lib/utils";
 import { isOfficeWorkspace } from "@/lib/state/slices/workspace/selectors";
+import { useSelectWorkspace } from "@/hooks/use-select-workspace";
 import {
-  rememberLastOfficeWorkspace,
-  rememberLastKanbanWorkspace,
   resolveLastOfficeWorkspace,
   resolveLastKanbanWorkspace,
   workspaceHomeHref,
@@ -258,7 +257,7 @@ export function AppSidebarFooter({ collapsed, onToggleSettingsMode }: AppSidebar
   const targetWorkspace = activeIsOffice
     ? resolveLastKanbanWorkspace(workspaces.items)
     : resolveLastOfficeWorkspace(workspaces.items);
-  const setActiveWorkspace = useAppStore((s) => s.setActiveWorkspace);
+  const selectWorkspace = useSelectWorkspace();
   const settingsMode = useAppStore((s) => s.appSidebar.settingsMode);
   const toggleSettings = useSettingsGearToggle(settingsMode, activeWorkspace, onToggleSettingsMode);
   const officeEnabled = useFeature("office");
@@ -311,21 +310,22 @@ export function AppSidebarFooter({ collapsed, onToggleSettingsMode }: AppSidebar
       {officeEnabled && (
         <FooterIconButton
           icon={activeIsOffice ? IconLayoutKanban : IconBuildings}
-          label={activeIsOffice ? t("sidebar:kanban") : t("sidebar:office")}
+          // Names the workspace, not the mode. Chrome follows the active
+          // workspace, so this button switches workspace and the mode comes
+          // along — "Office" alone described a place the app no longer has.
+          label={
+            targetWorkspace
+              ? t("sidebar:switchToWorkspace", { workspace: targetWorkspace.name })
+              : t("sidebar:createOfficeWorkspace")
+          }
           collapsed={collapsed}
           onClick={() => {
-            if (!activeIsOffice) rememberLastKanbanWorkspace(activeWorkspace);
-            if (activeIsOffice) rememberLastOfficeWorkspace(activeWorkspace);
-            const href =
-              !activeIsOffice && !targetWorkspace
-                ? "/office/setup?mode=new"
-                : workspaceHomeHref(targetWorkspace ?? undefined);
-            // Switching mode *is* switching workspace now that chrome follows
-            // the workspace record. Without this the store keeps the old
-            // workspace until the destination route re-resolves it, and the
-            // sidebar paints the mode we just left.
-            if (targetWorkspace) setActiveWorkspace(targetWorkspace.id);
-            router.push(href);
+            if (!targetWorkspace) {
+              router.push("/office/setup?mode=new");
+              return;
+            }
+            selectWorkspace(targetWorkspace);
+            router.push(workspaceHomeHref(targetWorkspace));
           }}
           testId={activeIsOffice ? "sidebar-kanban-button" : "sidebar-office-button"}
         />

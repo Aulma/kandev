@@ -31,6 +31,7 @@ const state = {
   userSettings: { appStatusBarEnabled: true },
 };
 
+const SWITCH_TO_OFFICE = "Switch to Office";
 let officeEnabled = false;
 const DEFAULT_PATHNAME = "/tasks/session-1";
 let pathname = DEFAULT_PATHNAME;
@@ -148,6 +149,9 @@ function resetFooterState() {
   state.userSettings.appStatusBarEnabled = true;
   window.localStorage.clear();
   document.cookie = "office-active-workspace=; path=/; max-age=0";
+  // Selecting a workspace writes this too, so a test that switched workspace
+  // would otherwise pin the next test's resolution to its leftover value.
+  document.cookie = "kandev-active-workspace=; path=/; max-age=0";
   mocks.setActiveWorkspace.mockClear();
   mocks.routerPush.mockClear();
   mocks.toggleSettingsMode.mockClear();
@@ -169,14 +173,14 @@ describe("AppSidebarFooter", () => {
     renderFooter();
 
     const statsButton = screen.getByRole("button", { name: "Stats" });
-    const officeButton = screen.getByRole("button", { name: "Office" });
+    const officeButton = screen.getByRole("button", { name: SWITCH_TO_OFFICE });
 
     expect(statsButton).toBeTruthy();
     expect(officeButton).toBeTruthy();
     expect(statsButton.getAttribute("href")).toBeNull();
     expect(officeButton.getAttribute("href")).toBeNull();
     expect(screen.queryByRole("link", { name: "Stats" })).toBeNull();
-    expect(screen.queryByRole("link", { name: "Office" })).toBeNull();
+    expect(screen.queryByRole("link", { name: SWITCH_TO_OFFICE })).toBeNull();
   });
 
   it("navigates from the Stats and Office footer buttons when kanban is active", () => {
@@ -185,11 +189,14 @@ describe("AppSidebarFooter", () => {
     renderFooter();
 
     fireEvent.click(screen.getByRole("button", { name: "Stats" }));
-    fireEvent.click(screen.getByRole("button", { name: "Office" }));
+    fireEvent.click(screen.getByRole("button", { name: SWITCH_TO_OFFICE }));
 
     expect(mocks.routerPush).toHaveBeenNthCalledWith(1, "/stats");
     expect(mocks.routerPush).toHaveBeenNthCalledWith(2, "/office?workspaceId=office-1");
-    expect(window.localStorage.getItem("kandev.lastKanbanWorkspaceId")).toBe("kanban-1");
+    // The destination is recorded, not the workspace being left — kanban-1 was
+    // recorded when it was selected.
+    expect(mocks.setActiveWorkspace).toHaveBeenCalledWith("office-1");
+    expect(document.cookie).toContain("office-active-workspace=office-1");
   });
 
   it("navigates to the last active office workspace when kanban is active", () => {
@@ -198,7 +205,9 @@ describe("AppSidebarFooter", () => {
 
     renderFooter();
 
-    fireEvent.click(screen.getByRole("button", { name: "Office" }));
+    // Labelled by the destination workspace, which is the one the office
+    // cookie names — not the generic "Office" the button used to say.
+    fireEvent.click(screen.getByRole("button", { name: "Switch to Office 2" }));
 
     expect(mocks.routerPush).toHaveBeenCalledWith("/office?workspaceId=office-2");
     // Switching mode *is* switching workspace now that chrome follows the
@@ -214,9 +223,11 @@ describe("AppSidebarFooter", () => {
 
     renderFooter();
 
-    fireEvent.click(screen.getByRole("button", { name: "Office" }));
+    // No workspace to name, so the button offers to create one instead.
+    fireEvent.click(screen.getByRole("button", { name: "Create an Office workspace" }));
 
     expect(mocks.routerPush).toHaveBeenCalledWith("/office/setup?mode=new");
+    expect(mocks.setActiveWorkspace).not.toHaveBeenCalled();
   });
 
   it("shows a Kanban button when an office workspace is active", () => {
@@ -226,22 +237,29 @@ describe("AppSidebarFooter", () => {
 
     renderFooter();
 
-    expect(screen.queryByRole("button", { name: "Office" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Kanban" }));
+    expect(screen.queryByRole("button", { name: SWITCH_TO_OFFICE })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Switch to Kanban" }));
 
     expect(mocks.routerPush).toHaveBeenCalledWith(KANBAN_HOME_HREF);
   });
 
-  it("remembers the current office workspace when toggling back to kanban", () => {
+  it("leaves the office workspace record intact when toggling back to kanban", () => {
     officeEnabled = true;
     state.workspaces.activeId = "office-2";
     window.localStorage.setItem("kandev.lastKanbanWorkspaceId", "kanban-1");
+    // Written when office-2 was selected. Each workspace is recorded on the way
+    // in, not on the way out, so this is what the toggle has to preserve for a
+    // later switch back to land on office-2 rather than some other office
+    // workspace.
+    document.cookie = "office-active-workspace=office-2; path=/";
 
     renderFooter();
 
-    fireEvent.click(screen.getByRole("button", { name: "Kanban" }));
+    fireEvent.click(screen.getByRole("button", { name: "Switch to Kanban" }));
 
+    expect(mocks.setActiveWorkspace).toHaveBeenCalledWith("kanban-1");
     expect(document.cookie).toContain("office-active-workspace=office-2");
+    expect(document.cookie).toContain("kandev-active-workspace=kanban-1");
     expect(mocks.routerPush).toHaveBeenCalledWith(KANBAN_HOME_HREF);
   });
 });

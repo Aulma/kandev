@@ -1,6 +1,7 @@
 {
   "archivedLoadFailed": "Àŕćĥĩvēď ţàśķś ćōũĺď ńōţ ƀē ĺōàďēď",
   "collapseAllBranches": "Ćōĺĺàƥśē àĺĺ",
+  "createOfficeWorkspace": "Ćŕēàţē àń Ōƒƒĩćē ŵōŕķśƥàćē",
   "orgChart": "Ōŕĝ Ćĥàŕţ",
   "retry": "Ŕēţŕŷ",
   "activeWorkspaceBadge": "Àćţĩvē",
@@ -70,6 +71,7 @@
   "projects": "Ƥŕōĵēćţś",
   "queuedPromptCount_one": "{{count}} qũēũēď ƥŕōḿƥţ",
   "queuedPromptCount_other": "{{count}} qũēũēď ƥŕōḿƥţś",
+  "switchToWorkspace": "Śŵĩţćĥ ţō {{workspace}}",
   "wipQueuePosition": "Ƥōśĩţĩōń {{position}} ōƒ {{total}} ĩń {{step}} qũēũē",
   "quickChat": "Qũĩćķ Ćĥàţ",
   "quickTerminal": "Qũĩćķ ţēŕḿĩńàĺ",

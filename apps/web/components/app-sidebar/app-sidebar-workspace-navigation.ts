@@ -15,19 +15,44 @@ export function workspaceHomeHref(workspace: ModeWorkspace | undefined): string 
   return `/office?workspaceId=${workspace.id}`;
 }
 
-export function rememberLastKanbanWorkspace(workspace: ModeWorkspace | undefined): void {
-  if (!workspace || isOfficeWorkspace(workspace) || typeof window === "undefined") return;
-  window.localStorage.setItem(LAST_KANBAN_WORKSPACE_KEY, workspace.id);
-  writeWorkspaceCookie(ACTIVE_WORKSPACE_COOKIE, workspace.id);
+/**
+ * Records a workspace as the active one, and as the last of its kind.
+ *
+ * One write per workspace change. This replaced a pair of type-specific
+ * `rememberLast…` helpers that call sites had to dispatch between — and
+ * sometimes call both of, or call for the workspace being *left* as well as
+ * the one being entered — which is how the two cookies drifted out of step.
+ *
+ * The per-kind record is what lets the mode toggle return you to the workspace
+ * you last used on the other side, so it is kept alongside the active-workspace
+ * cookie rather than derived from it.
+ */
+export function rememberWorkspaceSelection(workspace: ModeWorkspace | undefined): void {
+  if (!workspace) return;
+  rememberWorkspaceSelectionById(workspace.id, isOfficeWorkspace(workspace) ? "office" : "kanban");
 }
 
-export function rememberLastOfficeWorkspace(workspace: ModeWorkspace | undefined): void {
-  if (!workspace || !isOfficeWorkspace(workspace) || typeof document === "undefined") return;
-  writeWorkspaceCookie(ACTIVE_WORKSPACE_COOKIE, workspace.id);
-  writeWorkspaceCookie(LEGACY_OFFICE_ACTIVE_WORKSPACE_COOKIE, workspace.id);
+/**
+ * The same write for a caller that knows the kind but does not hold a workspace
+ * record — the setup wizard, whose create response returns an id and nothing
+ * else. Passing a fabricated record with an invented `office_workflow_id` would
+ * be a lie the type system happily accepts.
+ */
+export function rememberWorkspaceSelectionById(id: string, kind: "office" | "kanban"): void {
+  if (!id || typeof document === "undefined") return;
+  writeWorkspaceCookie(ACTIVE_WORKSPACE_COOKIE, id);
+  if (kind === "office") {
+    writeWorkspaceCookie(LEGACY_OFFICE_ACTIVE_WORKSPACE_COOKIE, id);
+    return;
+  }
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(LAST_KANBAN_WORKSPACE_KEY, id);
+  }
 }
 
-export function resolveLastKanbanWorkspace(workspaces: ModeWorkspace[]): ModeWorkspace | null {
+// Generic over the record so callers holding full workspaces get one back —
+// the mode toggle labels itself with the destination workspace's name.
+export function resolveLastKanbanWorkspace<T extends ModeWorkspace>(workspaces: T[]): T | null {
   const kanbanWorkspaces = workspaces.filter((workspace) => !isOfficeWorkspace(workspace));
   if (kanbanWorkspaces.length === 0) return null;
 
@@ -46,7 +71,7 @@ export function resolveLastKanbanWorkspace(workspaces: ModeWorkspace[]): ModeWor
   return kanbanWorkspaces[0] ?? null;
 }
 
-export function resolveLastOfficeWorkspace(workspaces: ModeWorkspace[]): ModeWorkspace | null {
+export function resolveLastOfficeWorkspace<T extends ModeWorkspace>(workspaces: T[]): T | null {
   const officeWorkspaces = workspaces.filter(isOfficeWorkspace);
   if (officeWorkspaces.length === 0) return null;
 

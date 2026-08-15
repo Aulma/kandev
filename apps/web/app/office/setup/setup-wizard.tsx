@@ -16,6 +16,7 @@ import { StepTask } from "./step-task";
 import { StepReview } from "./step-review";
 import { WizardFooter } from "./wizard-footer";
 import { CloseButton } from "./close-button";
+import { rememberWorkspaceSelectionById } from "@/components/app-sidebar/app-sidebar-workspace-navigation";
 import {
   DEFAULT_ONBOARDING_TASK_DESCRIPTION,
   DEFAULT_ONBOARDING_TASK_TITLE,
@@ -217,7 +218,11 @@ export function SetupWizard({
     try {
       const result = await submitOnboarding(data);
       toast.success(t("office:workspaceCreatedSuccessfully"));
-      document.cookie = `office-active-workspace=${result.workspaceId}; path=/; max-age=86400; samesite=strict; secure`;
+      // Through the shared helper rather than a hand-written cookie: this one
+      // wrote only the legacy office cookie, so a freshly created workspace was
+      // not recorded as the active one and the chrome that follows the active
+      // workspace could not see it.
+      rememberWorkspaceSelectionById(result.workspaceId, "office");
       router.push(`/office?workspaceId=${result.workspaceId}`);
       router.refresh();
     } catch (err) {
