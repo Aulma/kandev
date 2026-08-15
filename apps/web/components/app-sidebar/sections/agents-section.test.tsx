@@ -1,4 +1,3 @@
-import { act } from "react";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AgentProfile } from "@/lib/state/slices/office/types";
@@ -15,17 +14,6 @@ const defaultAgentId = "claude";
 const defaultAgentDisplayName = "Claude";
 const defaultAgentModel = "claude-sonnet-4-5";
 const timestamp = "2026-01-01T00:00:00Z";
-type Deferred<T> = {
-  resolve: (value: T) => void;
-  promise: Promise<T>;
-};
-const createDeferred = <T,>() => {
-  let resolve: (value: T) => void = () => {};
-  const promise = new Promise<T>((res) => {
-    resolve = res;
-  });
-  return { promise, resolve } as Deferred<T>;
-};
 
 const state = {
   appSidebar: {
@@ -213,83 +201,15 @@ describe("AgentsSection workspace scoping", () => {
     expect(state.setOfficeAgentProfiles).not.toHaveBeenCalledWith(expect.anything(), []);
   });
 
-  it("does not overwrite stale agent state when workspace changes mid-fetch", async () => {
-    let resolveAgents: (value: { agents: AgentProfile[] }) => void = () => {};
-    const pending = new Promise<{ agents: AgentProfile[] }>((resolve) => {
-      resolveAgents = resolve;
-    });
-
-    vi.mocked(listAgentProfiles).mockReturnValue(pending);
-
-    state.workspaces.activeId = staleWorkspaceId;
+  it("fetches nothing of its own", () => {
+    // Agent loading moved to `useOfficeWorkspaceData`, so this section renders
+    // whatever the store holds and never issues a request. The race and
+    // request-sequencing cases that used to live here moved with it, to
+    // `hooks/use-office-workspace-data.test.ts`.
     render(<AgentsSection collapsed={false} />);
 
-    state.workspaces.activeId = null;
-    const staleAgents = {
-      agents: [
-        createAgentProfile({
-          id: "race-agent",
-          workspace: staleWorkspaceId,
-          name: "Race Agent",
-        }),
-      ],
-    };
-
-    await act(async () => {
-      resolveAgents(staleAgents);
-      await pending;
-    });
-
+    expect(vi.mocked(listAgentProfiles)).not.toHaveBeenCalled();
     expect(state.setOfficeAgentProfiles).not.toHaveBeenCalled();
-  });
-});
-
-describe("AgentsSection request sequencing", () => {
-  it("applies only the latest response after rapid workspace switches", async () => {
-    const request1 = createDeferred<{ agents: AgentProfile[] }>();
-    const request2 = createDeferred<{ agents: AgentProfile[] }>();
-    const request3 = createDeferred<{ agents: AgentProfile[] }>();
-    const agentFromFirstRequest = createAgentProfile({
-      id: "agent-a",
-      workspace: defaultWorkspaceId,
-      name: "First Agent",
-    });
-    const agentFromSecondRequest = createAgentProfile({
-      id: "agent-b",
-      workspace: staleWorkspaceId,
-      name: "Second Agent",
-    });
-    const agentFromThirdRequest = createAgentProfile({
-      id: "agent-c",
-      workspace: defaultWorkspaceId,
-      name: "Third Agent",
-    });
-
-    vi.mocked(listAgentProfiles)
-      .mockReturnValueOnce(request1.promise)
-      .mockReturnValueOnce(request2.promise)
-      .mockReturnValueOnce(request3.promise);
-
-    state.workspaces.activeId = defaultWorkspaceId;
-    const { rerender } = render(<AgentsSection collapsed={false} />);
-    state.workspaces.activeId = staleWorkspaceId;
-    rerender(<AgentsSection collapsed={false} />);
-    state.workspaces.activeId = defaultWorkspaceId;
-    rerender(<AgentsSection collapsed={false} />);
-
-    await act(async () => {
-      request1.resolve({ agents: [agentFromFirstRequest] });
-      request2.resolve({ agents: [agentFromSecondRequest] });
-      request3.resolve({ agents: [agentFromThirdRequest] });
-      await request1.promise;
-      await request2.promise;
-      await request3.promise;
-    });
-
-    expect(state.setOfficeAgentProfiles).toHaveBeenCalledTimes(1);
-    expect(state.setOfficeAgentProfiles).toHaveBeenCalledWith(defaultWorkspaceId, [
-      agentFromThirdRequest,
-    ]);
   });
 });
 

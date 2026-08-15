@@ -1,20 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import Link from "@/components/routing/app-link";
 import { usePathname, useRouter } from "@/lib/routing/client-router";
 import { IconPlus, IconRobot, IconSitemap } from "@tabler/icons-react";
 import { Button } from "@kandev/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@kandev/ui/tooltip";
-import { useAppStore, useAppStoreApi } from "@/components/state-provider";
+import { useAppStore } from "@/components/state-provider";
 import {
   selectOfficeAgentProfiles,
   selectOfficeInboxItems,
 } from "@/lib/state/slices/office/selectors";
 import { useInOffice } from "@/hooks/use-in-office";
-import { useOfficeRefetch } from "@/hooks/use-office-refetch";
-import { listAgentProfiles } from "@/lib/api/domains/office-api";
 import { cn } from "@/lib/utils";
 import type { AgentProfile } from "@/lib/state/slices/office/types";
 import { selectActiveSessionsForAgent } from "@/lib/state/slices/session/selectors";
@@ -32,17 +29,11 @@ type AgentsSectionProps = {
   collapsed: boolean;
 };
 
-// The "clear office data when no workspace is active" effect that used to live
-// here is gone: with the office collections keyed by workspace id, one
-// workspace's agents can no longer be read while another is active, so there is
-// nothing left to clear. See `lib/state/slices/office/selectors.ts`.
-
-function isCurrentWorkspaceResponse(
-  requestWorkspaceId: string | null,
-  activeWorkspaceId: string | null,
-) {
-  return activeWorkspaceId !== null && requestWorkspaceId === activeWorkspaceId;
-}
+// This section owns no fetching. It used to run its own `listAgentProfiles`
+// call plus a sequence guard, to recover from a store that only the `/office`
+// route filled, and to wipe that store when the active workspace went away.
+// `useOfficeWorkspaceData` (mounted in `AppSidebar`) now loads the agents, and
+// keying them by workspace id removed the need to clear anything.
 
 function AgentsSectionHeaderAction({ router }: { router: { push: (path: string) => void } }) {
   const { t } = useTranslation();
@@ -86,29 +77,7 @@ export function AgentsSection({ collapsed }: AgentsSectionProps) {
   const { t } = useTranslation();
   const router = useRouter();
   const inOffice = useInOffice();
-  const store = useAppStoreApi();
-  const agents = useAppStore(selectOfficeAgentProfiles);
-  const workspaceId = useAppStore((s) => s.workspaces.activeId);
-  const setOfficeAgentProfiles = useAppStore((s) => s.setOfficeAgentProfiles);
-  const visibleAgents = agents;
-  const fetchSequenceRef = useRef(0);
-
-  const refetchAgents = useCallback(async () => {
-    if (!workspaceId || !inOffice) return;
-    const requestId = ++fetchSequenceRef.current;
-    const requestedWorkspaceId = workspaceId;
-    const res = await listAgentProfiles(requestedWorkspaceId).catch(() => ({ agents: [] }));
-    if (!isCurrentWorkspaceResponse(requestedWorkspaceId, store.getState().workspaces.activeId))
-      return;
-    if (requestId !== fetchSequenceRef.current) return;
-    setOfficeAgentProfiles(requestedWorkspaceId, res.agents ?? []);
-  }, [inOffice, setOfficeAgentProfiles, store, workspaceId]);
-
-  useEffect(() => {
-    refetchAgents();
-  }, [refetchAgents]);
-
-  useOfficeRefetch("agents", refetchAgents);
+  const visibleAgents = useAppStore(selectOfficeAgentProfiles);
 
   if (!inOffice) return null;
 

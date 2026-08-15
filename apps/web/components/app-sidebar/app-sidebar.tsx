@@ -6,6 +6,7 @@ import { isSettingsRoute } from "./app-sidebar-route";
 import { useAppStore } from "@/components/state-provider";
 import { useEnsureWorkspaceWorkflows } from "@/hooks/use-workflows";
 import { useInOffice } from "@/hooks/use-in-office";
+import { useOfficeWorkspaceData } from "@/hooks/use-office-workspace-data";
 import { cn } from "@/lib/utils";
 import {
   APP_SIDEBAR_COLLAPSED_WIDTH,
@@ -161,6 +162,11 @@ export function AppSidebar() {
   // workspace — hoisting it above the collapsible Tasks section is required so
   // a user with the section collapsed still gets fresh workflows on a switch.
   useEnsureWorkspaceWorkflows();
+  // Same reasoning for the office collections: the Projects and Agents
+  // sections, and the inbox badge, all read a store that only the `/office`
+  // route used to fill. Loading here ties the data to the active workspace
+  // instead of to the URL. No-ops for a kanban workspace.
+  useOfficeWorkspaceData();
 
   const handleResize = useCallback(
     (e: React.MouseEvent) => {

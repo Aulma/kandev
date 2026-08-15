@@ -86,6 +86,13 @@ vi.mock("@/hooks/use-workflows", () => ({
   useEnsureWorkspaceWorkflows: () => {},
 }));
 
+// Same reason as the workflows hook above: this suite covers the sidebar's
+// layout and section composition, not the workspace-scoped data loads it
+// hoists. `use-office-workspace-data.test.ts` covers those.
+vi.mock("@/hooks/use-office-workspace-data", () => ({
+  useOfficeWorkspaceData: () => {},
+}));
+
 const storeState = {
   features: {
     office: false,
