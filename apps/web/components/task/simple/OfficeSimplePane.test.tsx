@@ -18,12 +18,6 @@ vi.mock("@/components/routing/app-link", () => ({
   ),
 }));
 
-vi.mock("@/app/office/components/office-topbar-portal", () => ({
-  OfficeTopbarPortal: ({ children }: { children: ReactNode }) => (
-    <div data-testid="office-topbar">{children}</div>
-  ),
-}));
-
 vi.mock("@kandev/ui/tooltip", () => ({
   Tooltip: ({ children }: { children: ReactNode }) => <>{children}</>,
   TooltipTrigger: ({ children }: { children: ReactNode }) => <>{children}</>,
