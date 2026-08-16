@@ -92,11 +92,12 @@ function OfficePageNav({ onClose }: { onClose: () => void }) {
 }
 
 /**
- * Office page chrome on the shared `PageShell`. List pages show a static
- * title; detail pages render a portal target (#office-topbar-slot) that the
- * page component fills with its breadcrumb via OfficeTopbarPortal. The SPA
- * office paint path (`src/office-routes.tsx`) wraps every route's output in
- * this shell so the chrome cannot drift.
+ * Office page chrome on the shared `PageShell`. List pages render their title
+ * as the breadcrumb's current-page crumb, exactly as Settings does; detail
+ * pages render a portal target (#office-topbar-slot) that the page component
+ * fills with its breadcrumb via OfficeTopbarPortal. The SPA office paint path
+ * (`src/office-routes.tsx`) wraps every route's output in this shell so the
+ * chrome cannot drift.
  */
 export function OfficeShell({
   children,
@@ -115,7 +116,10 @@ export function OfficeShell({
   return (
     <PageShell
       title={title}
-      variant="root"
+      // Detail pages still fill the portal, and routes without a title entry
+      // (the setup wizard) have no crumb to show: both keep the root variant's
+      // bare bar until the portal is retired.
+      variant={detail || !titleKey ? "root" : "breadcrumb"}
       backLabel=""
       topbarTestId="office-topbar"
       className="gap-2 bg-background px-4"
@@ -128,9 +132,7 @@ export function OfficeShell({
       leading={
         detail ? (
           <div id="office-topbar-slot" className="flex items-center gap-2 flex-1 min-w-0" />
-        ) : (
-          titleKey && <h1 className="truncate text-sm font-medium text-foreground">{title}</h1>
-        )
+        ) : undefined
       }
     >
       {/* `data-office-route` stamps the RESOLVED route onto the outlet, and is

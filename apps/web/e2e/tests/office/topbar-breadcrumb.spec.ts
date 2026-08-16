@@ -1,4 +1,5 @@
 import { test, expect } from "../../fixtures/office-fixture";
+import { officeTopbarTitle } from "../../helpers/office-topbar";
 
 test.describe("Topbar breadcrumb", () => {
   test("issue detail shows task title", async ({ testPage, apiClient, officeSeed }) => {
@@ -13,7 +14,7 @@ test.describe("Topbar breadcrumb", () => {
 
   test("tasks list shows Tasks heading", async ({ testPage, officeSeed: _ }) => {
     await testPage.goto("/office/tasks");
-    await expect(testPage.getByRole("heading", { name: /Tasks/i }).first()).toBeVisible({
+    await expect(officeTopbarTitle(testPage)).toHaveText(/Tasks/i, {
       timeout: 10_000,
     });
   });
