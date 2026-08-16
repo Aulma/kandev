@@ -6,19 +6,19 @@ import { KanbanHeaderMobile } from "./kanban-header-mobile";
 
 vi.mock("@/components/page-topbar", () => ({
   PageTopbar: ({
-    backLabel,
+    title,
     leading,
     leftActions,
     actions,
   }: {
-    backLabel?: string;
+    title?: string;
     leading?: ReactNode;
     leftActions?: ReactNode;
     actions?: ReactNode;
   }) => (
     <header>
       {leading}
-      <span>{backLabel}</span>
+      <span data-testid="topbar-title">{title}</span>
       <div data-testid="topbar-left-actions">{leftActions}</div>
       <div>{actions}</div>
     </header>
@@ -86,24 +86,26 @@ function renderHeader(
 }
 
 describe("KanbanHeaderMobile", () => {
-  it("links the Kandev brand home and omits the redundant Home title", () => {
+  it("links the Kandev brand home and names the page through the title crumb", () => {
     renderHeader("Home", ACTIVE_WORKSPACE_ID);
 
     expect(screen.getByRole("link", { name: "Kandev home" }).getAttribute("href")).toBe(
       `/?home=overview&workspaceId=${ACTIVE_WORKSPACE_ID}`,
     );
+    expect(screen.getByTestId("topbar-title").textContent).toBe("Home");
+    // The old two-line title/workspace stack is gone.
     expect(screen.getByTestId(LEFT_ACTIONS_TEST_ID).textContent).toBe("");
   });
 
-  it("renders page title and workspace label for non-Home pages", () => {
+  it("renders the title crumb without repeating the workspace label", () => {
     renderHeader("Tasks", undefined, undefined, "tasks");
 
+    expect(screen.getByTestId("topbar-title").textContent).toBe("Tasks");
+    // The picker owns workspace identity; the bar never repeats it.
+    expect(screen.queryByText("/root/kandev")).toBeNull();
+    // The scrolling strip carries actions only; page context is the crumb's job.
     const actionStrip = screen.getByTestId("mobile-topbar-action-strip");
-    expect(actionStrip.textContent).toContain("Tasks");
-    expect(actionStrip.textContent).toContain("/root/kandev");
-    expect(
-      actionStrip.querySelector("[data-testid='mobile-topbar-page-context']")?.className,
-    ).toContain("max-w-[38vw]");
+    expect(actionStrip.textContent).not.toContain("Tasks");
   });
 
   it("opens quick chat from the header action when a workspace is active", () => {
