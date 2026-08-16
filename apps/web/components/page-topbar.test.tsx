@@ -110,13 +110,15 @@ describe("PageTopbar titleSlot", () => {
     render(
       <PageTopbar
         title="Checkout revamp"
+        testId="slot-topbar"
         titleSlot={<input aria-label="Rename task" defaultValue="Checkout revamp" />}
       />,
     );
 
-    const page = document.querySelector('[data-slot="breadcrumb-page"]');
+    const page = screen.getByTestId("slot-topbar").querySelector('[data-slot="breadcrumb-page"]');
     expect(page?.getAttribute("aria-label")).toBe("Checkout revamp");
-    expect(screen.getByLabelText("Rename task")).not.toBeNull();
+    // The slot renders inside the current-page crumb, not merely somewhere.
+    expect(page?.contains(screen.getByLabelText("Rename task"))).toBe(true);
     // The plain-text title span is replaced, not doubled.
     expect(screen.queryByText("Checkout revamp")).toBeNull();
   });
@@ -126,9 +128,17 @@ describe("PageTopbar overflow actions", () => {
   afterEach(cleanup);
 
   it("renders overflow actions inline while there is room", () => {
-    render(<PageTopbar title="Task" overflowActions={<button type="button">Archive</button>} />);
+    render(
+      <PageTopbar
+        title="Task"
+        testId="overflow-topbar"
+        overflowActions={<button type="button">Archive</button>}
+      />,
+    );
 
-    expect(screen.getByRole("button", { name: "Archive" })).not.toBeNull();
+    // Inline means inside this header's action row, not merely mounted.
+    const header = screen.getByTestId("overflow-topbar");
+    expect(header.contains(screen.getByRole("button", { name: "Archive" }))).toBe(true);
     // Without pressure (no layout in the test DOM) the fold never engages.
     expect(screen.queryByTestId("topbar-actions-overflow")).toBeNull();
   });

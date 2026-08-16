@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, type ReactNode } from "react";
+import { memo, useEffect, useState, type ReactNode } from "react";
 import Link from "@/components/routing/app-link";
 import { IconBug, IconCircleDot } from "@tabler/icons-react";
 import { Button } from "@kandev/ui/button";
@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@kandev/ui/tooltip";
 import { PageTopbar } from "@/components/page-topbar";
 import { useAppStore } from "@/components/state-provider";
 import { selectOfficeProject } from "@/lib/state/slices/office/selectors";
+import { getProject } from "@/lib/api/domains/office-api";
 import { TaskTopBarTitle } from "@/components/task/task-top-bar-title";
 import { EditorsMenu } from "@/components/task/editors-menu";
 import { LayoutPresetSelector } from "@/components/task/layout-preset-selector";
@@ -32,10 +33,6 @@ type TaskTopBarProps = {
   taskId?: string | null;
   activeSessionId?: string | null;
   taskTitle?: string;
-  onStartAgent?: (agentProfileId: string) => void;
-  onStopAgent?: () => void;
-  isAgentRunning?: boolean;
-  isAgentLoading?: boolean;
   showDebugOverlay?: boolean;
   onToggleDebugOverlay?: () => void;
   workflowSteps?: WorkflowStepperStep[];
@@ -51,6 +48,34 @@ type TaskTopBarProps = {
   officeTaskHref?: string | null;
   onTaskUnarchived?: (taskId: string) => void;
 };
+
+/**
+ * The task's owning project, for the ancestor crumb. The office store is the
+ * source when warm; a cold-loaded /t/:id boots without the office collections,
+ * so a store miss falls back to fetching the record once. Projects only exist
+ * for office-owned tasks, so kanban-mode tasks simply render no trail.
+ */
+function useTaskProject(projectId: string | null | undefined) {
+  const storeProject = useAppStore((s) => selectOfficeProject(s, projectId));
+  const [fetched, setFetched] = useState<{ id: string; name: string } | null>(null);
+
+  useEffect(() => {
+    if (!projectId || storeProject) return;
+    let cancelled = false;
+    getProject(projectId)
+      .then((res) => {
+        if (!cancelled) setFetched({ id: res.id, name: res.name });
+      })
+      // A missing crumb is the harmless failure mode; the page stays usable.
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, storeProject]);
+
+  if (storeProject) return storeProject;
+  return fetched && fetched.id === projectId ? fetched : undefined;
+}
 
 const TaskTopBar = memo(function TaskTopBar({
   taskId,
@@ -71,15 +96,16 @@ const TaskTopBar = memo(function TaskTopBar({
   officeTaskHref,
   onTaskUnarchived,
 }: TaskTopBarProps) {
-  // The task's one ancestor crumb. Projects only exist for office-owned
-  // tasks, so kanban-mode tasks simply render no trail.
-  const project = useAppStore((s) => selectOfficeProject(s, projectId));
+  const { t } = useTranslation();
+  const project = useTaskProject(projectId);
   const showExecutorSettings =
     !isArchived && shouldShowExecutorEnvironmentControls(remoteExecutorType);
   return (
     <PageTopbar
       testId="task-topbar"
-      title={taskTitle ?? ""}
+      // Same fallback the rename control renders, so the crumb's accessible
+      // name and the measured width never diverge from what is shown.
+      title={taskTitle ?? t("task:taskDetails")}
       titleSlot={<TaskTopBarTitle taskId={taskId} taskTitle={taskTitle} isArchived={isArchived} />}
       parents={
         project ? [{ label: project.name, href: `/office/projects/${project.id}` }] : undefined

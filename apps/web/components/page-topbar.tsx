@@ -467,7 +467,9 @@ function TopbarActionsOverflow({ children }: { children: ReactNode }) {
         <button
           type="button"
           aria-label={t("common:showMoreActions")}
-          className="flex cursor-pointer items-center p-1 text-muted-foreground transition-colors hover:text-foreground"
+          // `-m-2 p-2` grows the touch target without moving the actions
+          // around it — same pattern as the crumb overflow trigger.
+          className="-m-2 flex cursor-pointer items-center p-2 text-muted-foreground transition-colors hover:text-foreground"
           data-testid="topbar-actions-overflow"
         >
           <IconDots className="size-4" />

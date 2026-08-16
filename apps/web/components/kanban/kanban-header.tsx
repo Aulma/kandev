@@ -239,8 +239,9 @@ function TabletHeader({
     <PageTopbar
       title={title}
       // 44px floor: this bar keeps its icon-lg touch controls above the
-      // token's fine-pointer 40px.
-      className="min-h-11"
+      // token's 40px. The md: variant is required — tablets render at md+
+      // where the token's md:min-h-10 would beat an unprefixed floor.
+      className="md:min-h-11"
       actionsClassName="gap-2"
       actions={
         <>

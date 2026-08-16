@@ -117,9 +117,16 @@ export function useTopbarPressure(refs: TopbarPressureRefs, enabled: boolean): T
     const resizeObserver = new ResizeObserver(measure);
     resizeObserver.observe(leadZone);
     if (refs.rightZone.current) resizeObserver.observe(refs.rightZone.current);
-    // Ghost content changes when titles or crumb labels change.
+    // Ghost content changes when titles or crumb labels change. Labels render
+    // as CSS generated content from data-label, so attribute mutations are the
+    // signal for in-place renames; childList covers crumbs appearing/leaving.
     const mutationObserver = new MutationObserver(measure);
-    mutationObserver.observe(ghost, { childList: true, subtree: true, characterData: true });
+    mutationObserver.observe(ghost, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["data-label"],
+    });
     measure();
     return () => {
       resizeObserver.disconnect();

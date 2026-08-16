@@ -94,7 +94,10 @@ function commentsReadOnly(task: Task, sessions: TaskSession[]): boolean {
 /** The task's ancestry as crumb data: the Tasks list, then the parent task when there is one. */
 function taskCrumbParents(task: Task, tasksLabel: string): ParentCrumb[] {
   const parents: ParentCrumb[] = [{ label: tasksLabel, href: "/office/tasks" }];
-  if (task.parentIdentifier && task.parentTitle) {
+  // Guard on the fields the crumb renders: parentId feeds the href and
+  // parentTitle the label. parentIdentifier alone must not produce a crumb
+  // that links to /office/tasks/undefined.
+  if (task.parentId && task.parentTitle) {
     parents.push({ label: task.parentTitle, href: `/office/tasks/${task.parentId}` });
   }
   return parents;

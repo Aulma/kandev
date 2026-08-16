@@ -118,7 +118,9 @@ export function RoutineDetailView({ initialRoutine, initialTriggers }: RoutineDe
   }, [routine.id]);
 
   useOfficeTopbar({
-    title: routine.name,
+    // The draft is the live name; `routine` is frozen at mount, so a saved
+    // rename would otherwise keep the old title until a reload.
+    title: draft.name,
     parents: [{ label: t("office:routines"), href: "/office/routines" }],
     actions: (
       <>
