@@ -15,7 +15,6 @@ type PageShellProps = {
   backLabel?: string;
   parents?: ParentCrumb[];
   titleSlot?: ReactNode;
-  variant?: "breadcrumb" | "root";
   center?: ReactNode;
   leading?: ReactNode;
   leftActions?: ReactNode;
@@ -53,7 +52,6 @@ type PageShellProps = {
  * nest a second one.
  */
 export function PageShell({
-  variant = "breadcrumb",
   leading,
   pageNav,
   navOmitDestinations,
@@ -64,13 +62,12 @@ export function PageShell({
   children,
   ...topbarProps
 }: PageShellProps) {
-  const home = useHomeAffordance(variant);
+  const home = useHomeAffordance();
   const { topbarTestId, ...forwarded } = topbarProps;
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <PageTopbar
         {...forwarded}
-        variant={variant}
         testId={topbarTestId}
         homeAffordance={home.mode}
         homeHref={home.href}

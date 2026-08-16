@@ -28,6 +28,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   "/office/workspace/activity": "office:activity",
   "/office/workspace/routing": "office:providerRouting",
   "/office/workspace/settings": "office:preferences",
+  "/office/setup": "office:setupTitle",
 };
 
 function resolveTitleKey(pathname: string): string | null {
@@ -123,11 +124,6 @@ function OfficeShellChrome({ children, routePath }: OfficeShellProps) {
       parents={chrome?.parents}
       leftActions={chrome?.leftActions}
       actions={chrome?.actions}
-      // Routes with neither declared chrome nor a title entry (the setup
-      // wizard, a detail page before its record loads) keep the root
-      // variant's bare bar.
-      variant={chrome || titleKey ? "breadcrumb" : "root"}
-      backLabel=""
       topbarTestId="office-topbar"
       className="gap-2 bg-background px-4"
       pageNav={(onClose) => <OfficePageNav onClose={onClose} />}

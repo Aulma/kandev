@@ -54,12 +54,6 @@ describe("PageTopbar home crumb", () => {
     expect(screen.queryByTestId(PHONE_HOME)).toBeNull();
     expect(screen.getByText("Agents")).not.toBeNull();
   });
-
-  it("omits it for the root variant, which renders a plain label instead of a breadcrumb", () => {
-    render(<PageTopbar title="Home" variant="root" backLabel="Kandev" />);
-
-    expect(screen.queryByTestId(PHONE_HOME)).toBeNull();
-  });
 });
 
 describe("PageTopbar parent crumbs", () => {

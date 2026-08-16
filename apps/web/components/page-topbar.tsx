@@ -74,7 +74,6 @@ type PageTopbarProps = {
    * they unmount and remount when the fold engages.
    */
   overflowActions?: ReactNode;
-  variant?: "breadcrumb" | "root";
   className?: string;
   centerClassName?: string;
   actionsClassName?: string;
@@ -185,6 +184,9 @@ function TopbarBreadcrumb({
           <BreadcrumbPage
             className="flex min-w-0 items-center gap-2"
             aria-label={titleSlot ? title : undefined}
+            // An interactive titleSlot (e.g. a rename control) must not sit
+            // inside a subtree announced as disabled.
+            aria-disabled={titleSlot ? false : undefined}
           >
             {icon}
             {titleSlot ?? <span className="truncate text-sm font-medium">{title}</span>}
@@ -304,34 +306,19 @@ function ParentCrumbs({
   );
 }
 
-type TopbarLeadingProps = {
-  variant: "breadcrumb" | "root";
-  backHref: string;
-  backLabel: string;
-  parents: ParentCrumb[] | undefined;
-  title: string;
-  titleSlot?: ReactNode;
-  subtitle?: string;
-  icon?: ReactNode;
-  homeAffordance: "none" | "phone" | "always";
-  homeHref: string;
-  crumbsCollapsed: boolean;
-};
-
-function TopbarLeading({ variant, backLabel, ...breadcrumbProps }: TopbarLeadingProps) {
-  if (variant === "root") {
-    if (!backLabel) return null;
-    return (
-      <div className="relative z-10 flex min-w-0 items-center">
-        <span className="truncate text-[15px] font-semibold leading-none">{backLabel}</span>
-      </div>
-    );
-  }
-  return <TopbarBreadcrumb backLabel={backLabel} {...breadcrumbProps} />;
-}
-
 function GhostSeparator() {
   return <IconChevronRight className="size-3.5 shrink-0" />;
+}
+
+/**
+ * Ghost text rendered as CSS generated content instead of a text node, so the
+ * invisible measurement row can never satisfy a text locator or a screen
+ * reader; only its width exists.
+ */
+function GhostLabel({ label, className }: { label: string; className?: string }) {
+  return (
+    <span data-label={label} className={cn("before:content-[attr(data-label)]", className)} />
+  );
 }
 
 type TopbarGhostProps = {
@@ -365,7 +352,7 @@ function TopbarGhost({
   const lead = showBack ? (
     <>
       <IconArrowLeft className="h-3.5 w-3.5 shrink-0" />
-      <span>{backLabel}</span>
+      <GhostLabel label={backLabel} />
       <GhostSeparator />
     </>
   ) : (
@@ -386,7 +373,7 @@ function TopbarGhost({
         {lead}
         {chain.map((p, index) => (
           <span key={`${p.href ?? p.label}-${index}`} className="flex items-center gap-1.5">
-            <span className="max-w-40 truncate">{p.label}</span>
+            <GhostLabel label={p.label} className="max-w-40 truncate" />
             <GhostSeparator />
           </span>
         ))}
@@ -401,14 +388,14 @@ function TopbarGhost({
         )}
         {lastParent && (
           <>
-            <span className="max-w-40 truncate">{lastParent.label}</span>
+            <GhostLabel label={lastParent.label} className="max-w-40 truncate" />
             <GhostSeparator />
           </>
         )}
       </span>
       <span className="flex items-center gap-2">
-        <span className="font-medium">{title}</span>
-        {subtitle && <span className="text-xs">{subtitle}</span>}
+        <GhostLabel label={title} className="font-medium" />
+        {subtitle && <GhostLabel label={subtitle} className="text-xs" />}
       </span>
     </div>
   );
@@ -509,7 +496,6 @@ export const PageTopbar = forwardRef<HTMLElement, PageTopbarProps>(function Page
     leftActions,
     actions,
     overflowActions,
-    variant = "breadcrumb",
     className,
     centerClassName,
     actionsClassName,
@@ -524,8 +510,7 @@ export const PageTopbar = forwardRef<HTMLElement, PageTopbarProps>(function Page
   const ghostRef = useRef<HTMLDivElement>(null);
   const rightZoneRef = useRef<HTMLDivElement>(null);
   // Measurement only matters once there is something that can fold.
-  const measured =
-    variant === "breadcrumb" && ((parents?.length ?? 0) > 0 || overflowActions != null);
+  const measured = (parents?.length ?? 0) > 0 || overflowActions != null;
   const pressure = useTopbarPressure(
     { leadZone: leadZoneRef, ghost: ghostRef, rightZone: rightZoneRef },
     measured,
@@ -553,8 +538,7 @@ export const PageTopbar = forwardRef<HTMLElement, PageTopbarProps>(function Page
       )}
       <div ref={leadZoneRef} className="flex min-w-0 grow items-center gap-3">
         {leading}
-        <TopbarLeading
-          variant={variant}
+        <TopbarBreadcrumb
           backHref={backHref}
           backLabel={backLabel}
           parents={parents}
