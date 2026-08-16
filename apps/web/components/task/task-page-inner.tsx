@@ -125,6 +125,7 @@ function buildTaskTopBarProps(params: {
     currentStepId: resolveCurrentStepId(params.sessionWorkflowStepId, taskProps.workflowStepId),
     workflowId: taskProps.workflowId,
     workspaceId: taskProps.workspaceId,
+    projectId: taskProps.projectId,
     issueUrl: taskProps.issueUrl,
     issueNumber: taskProps.issueNumber,
     isArchived: taskProps.isArchived,

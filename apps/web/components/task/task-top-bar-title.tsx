@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from "@kandev/ui/breadcrumb";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@kandev/ui/tooltip";
 import { Input } from "@kandev/ui/input";
 import { useTaskActions } from "@/hooks/use-task-actions";
@@ -95,35 +94,29 @@ export function TaskTopBarTitle({ taskId, taskTitle, isArchived }: TaskTopBarTit
     );
   }
 
+  // The surrounding PageTopbar title crumb owns the breadcrumb semantics
+  // (role, aria-current, accessible name); this renders only the interactive
+  // rename control. When renameable it is keyboard-operable (tab + Enter) so
+  // AT and pointer-actionability checks see a working control.
   return (
-    <Breadcrumb className="min-w-0 max-w-full" aria-label={t("common:breadcrumb")}>
-      <BreadcrumbList className="min-w-0 max-w-full flex-nowrap text-sm">
-        <BreadcrumbItem className="min-w-0 max-w-full">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              {/* BreadcrumbPage defaults to aria-disabled="true"; when renameable,
-                  mark it enabled and make it keyboard-operable (tab + Enter) so
-                  AT and pointer-actionability checks see a working control. */}
-              <BreadcrumbPage
-                ref={titleRef}
-                className="block max-w-full truncate rounded-sm font-medium outline-none focus-visible:ring-[2px] focus-visible:ring-ring/35"
-                aria-disabled={!canRename}
-                tabIndex={canRename ? 0 : undefined}
-                onDoubleClick={startEditing}
-                onKeyDown={canRename ? handleTitleKeyDown : undefined}
-              >
-                {taskTitle ?? t("task:taskDetails")}
-              </BreadcrumbPage>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-sm whitespace-normal break-words">
-              <span className="block">{taskTitle ?? t("task:taskDetails")}</span>
-              {canRename && (
-                <span className="mt-1 block">{t("task:doubleClickToEditOrPress")}</span>
-              )}
-            </TooltipContent>
-          </Tooltip>
-        </BreadcrumbItem>
-      </BreadcrumbList>
-    </Breadcrumb>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          ref={titleRef}
+          data-testid="task-topbar-title"
+          className="block min-w-0 max-w-full truncate text-sm rounded-sm font-medium outline-none focus-visible:ring-[2px] focus-visible:ring-ring/35"
+          aria-disabled={!canRename}
+          tabIndex={canRename ? 0 : undefined}
+          onDoubleClick={startEditing}
+          onKeyDown={canRename ? handleTitleKeyDown : undefined}
+        >
+          {taskTitle ?? t("task:taskDetails")}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-sm whitespace-normal break-words">
+        <span className="block">{taskTitle ?? t("task:taskDetails")}</span>
+        {canRename && <span className="mt-1 block">{t("task:doubleClickToEditOrPress")}</span>}
+      </TooltipContent>
+    </Tooltip>
   );
 }

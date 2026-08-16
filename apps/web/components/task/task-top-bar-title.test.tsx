@@ -22,7 +22,7 @@ afterEach(() => {
 });
 
 function getTitle() {
-  return screen.getByText("My task", { selector: '[aria-current="page"]' });
+  return screen.getByTestId("task-topbar-title");
 }
 
 function queryInput() {
@@ -35,7 +35,7 @@ function startEditing() {
 }
 
 describe("TaskTopBarTitle — idle state", () => {
-  it("renders the title as the breadcrumb page when idle", () => {
+  it("renders the title as the interactive title crumb when idle", () => {
     render(<TaskTopBarTitle taskId="task-1" taskTitle="My task" />);
 
     expect(getTitle()).toBeTruthy();
@@ -54,7 +54,7 @@ describe("TaskTopBarTitle — idle state", () => {
     );
   });
 
-  it("keeps the breadcrumb aria-disabled and unfocusable when the task is archived", () => {
+  it("keeps the title aria-disabled and unfocusable when the task is archived", () => {
     render(<TaskTopBarTitle taskId="task-1" taskTitle="My task" isArchived />);
 
     expect(getTitle().getAttribute("aria-disabled")).toBe("true");
