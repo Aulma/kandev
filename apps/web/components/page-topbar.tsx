@@ -452,7 +452,11 @@ function TopbarRightZone({
   const hasCluster = Boolean(actions || overflowActions);
   if (!hasCluster && !showStatusTrigger) return null;
   return (
-    <div ref={zoneRef} className="flex shrink-0 items-center gap-3">
+    // No `min-w-0`: the zone's automatic minimum is its min-content width, so a
+    // default `shrink-0` cluster still pins it at full width and every shrink
+    // goes to the lead zone. A cluster that opts into shrinking (the phone
+    // bar's scrolling action strip) lowers that floor instead of overflowing.
+    <div ref={zoneRef} className="flex shrink items-center gap-3">
       {hasCluster && (
         <div className={cn("relative z-10 flex shrink-0 items-center gap-2", actionsClassName)}>
           {!actionsOverflowed && overflowActions}
