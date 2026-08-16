@@ -80,9 +80,7 @@ const TaskTopBar = memo(function TaskTopBar({
     <PageTopbar
       testId="task-topbar"
       title={taskTitle ?? ""}
-      titleSlot={
-        <TaskTopBarTitle taskId={taskId} taskTitle={taskTitle} isArchived={isArchived} />
-      }
+      titleSlot={<TaskTopBarTitle taskId={taskId} taskTitle={taskTitle} isArchived={isArchived} />}
       parents={
         project ? [{ label: project.name, href: `/office/projects/${project.id}` }] : undefined
       }

@@ -76,9 +76,7 @@ test.describe("Task topbar long title layout", () => {
     const session = new SessionPage(testPage);
     await session.waitForLoad();
 
-    const title = testPage.locator(
-      '[data-testid="task-topbar"] [data-testid="task-topbar-title"]',
-    );
+    const title = testPage.locator('[data-testid="task-topbar"] [data-testid="task-topbar-title"]');
     await expect(title).toHaveText(LONG_TASK_TITLE, { timeout: 10_000 });
     await expect(testPage.getByTestId("layout-preset-trigger")).toBeVisible();
 

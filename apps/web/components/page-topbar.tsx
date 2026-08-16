@@ -316,9 +316,7 @@ function GhostSeparator() {
  * reader; only its width exists.
  */
 function GhostLabel({ label, className }: { label: string; className?: string }) {
-  return (
-    <span data-label={label} className={cn("before:content-[attr(data-label)]", className)} />
-  );
+  return <span data-label={label} className={cn("before:content-[attr(data-label)]", className)} />;
 }
 
 type TopbarGhostProps = {
