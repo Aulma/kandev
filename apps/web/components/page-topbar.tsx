@@ -1,8 +1,8 @@
 import Link from "@/components/routing/app-link";
-import { forwardRef } from "react";
-import type { ReactNode } from "react";
+import { forwardRef, useRef } from "react";
+import type { ReactNode, RefObject } from "react";
 import { useTranslation } from "react-i18next";
-import { IconArrowLeft, IconHome } from "@tabler/icons-react";
+import { IconArrowLeft, IconChevronRight, IconDots, IconHome } from "@tabler/icons-react";
 import {
   Breadcrumb,
   BreadcrumbEllipsis,
@@ -20,7 +20,11 @@ import {
 } from "@kandev/ui/dropdown-menu";
 import { cn } from "@kandev/ui/lib/utils";
 import { AppStatusDrawerTrigger } from "@/components/app-status-bar/app-status-surface-provider";
+import { useTopbarPressure } from "@/hooks/use-topbar-pressure";
 import { linkToTaskOverview } from "@/lib/links";
+
+/** The one bar height. Bespoke bars adopt this token instead of redeclaring it. */
+export const TOPBAR_HEIGHT_CLASSNAME = "h-10 min-h-11 md:min-h-10";
 
 /**
  * A middle breadcrumb between the leading crumb and the page title. No `href`
@@ -49,14 +53,27 @@ type PageTopbarProps = {
    * static text on desktop (e.g. "Settings", whose menu the sidebar owns).
    */
   parents?: ParentCrumb[];
+  /**
+   * Optional interactive replacement for the title crumb (e.g. an inline
+   * rename control). `title` stays required: it is the accessible name and
+   * the width the space policy measures.
+   */
+  titleSlot?: ReactNode;
   /** Optional content rendered before the breadcrumb */
   leading?: ReactNode;
-  /** Optional content rendered at the visual center of the topbar */
+  /** Optional content rendered between the breadcrumb and the actions */
   center?: ReactNode;
   /** Optional content rendered alongside the left orientation label */
   leftActions?: ReactNode;
   /** Optional content rendered on the right side of the topbar */
   actions?: ReactNode;
+  /**
+   * Actions that fold into a trailing "…" menu when even the collapsed
+   * breadcrumb would squeeze the title below its floor. Rendered inline
+   * (before `actions`) while there is room. Keep these self-contained;
+   * they unmount and remount when the fold engages.
+   */
+  overflowActions?: ReactNode;
   variant?: "breadcrumb" | "root";
   className?: string;
   centerClassName?: string;
@@ -110,19 +127,23 @@ function TopbarBreadcrumb({
   backLabel,
   parents,
   title,
+  titleSlot,
   subtitle,
   icon,
   homeAffordance,
   homeHref,
+  crumbsCollapsed,
 }: {
   backHref: string;
   backLabel: string;
   parents: ParentCrumb[] | undefined;
   title: string;
+  titleSlot?: ReactNode;
   subtitle?: string;
   icon?: ReactNode;
   homeAffordance: "none" | "phone" | "always";
   homeHref: string;
+  crumbsCollapsed: boolean;
 }) {
   const { t } = useTranslation();
   // The Home prefix is redundant on desktop, where the AppSidebar always shows
@@ -159,11 +180,14 @@ function TopbarBreadcrumb({
             <BreadcrumbSeparator className={homeCrumbClass} />
           </>
         )}
-        <ParentCrumbs parents={parents} />
+        <ParentCrumbs parents={parents} forceCollapsed={crumbsCollapsed} />
         <BreadcrumbItem className="min-w-0">
-          <BreadcrumbPage className="flex min-w-0 items-center gap-2">
+          <BreadcrumbPage
+            className="flex min-w-0 items-center gap-2"
+            aria-label={titleSlot ? title : undefined}
+          >
             {icon}
-            <span className="truncate text-sm font-medium">{title}</span>
+            {titleSlot ?? <span className="truncate text-sm font-medium">{title}</span>}
             {subtitle && (
               <>
                 <span className="hidden text-muted-foreground/50 sm:inline">·</span>
@@ -211,32 +235,42 @@ function ParentCrumbLabel({ crumb }: { crumb: ParentCrumb }) {
 /**
  * Middle crumbs: the full chain from `md` up; below `md` everything except the
  * last parent collapses into a `…` dropdown so deep paths stay one row —
- * `🏠 › … › Kanban1 › Integrations`.
+ * `🏠 › … › Kanban1 › Integrations`. `forceCollapsed` applies the same
+ * collapsed form at any width, when the space policy reports the full chain
+ * would squeeze the title below its floor.
  */
-function ParentCrumbs({ parents }: { parents: ParentCrumb[] | undefined }) {
+function ParentCrumbs({
+  parents,
+  forceCollapsed,
+}: {
+  parents: ParentCrumb[] | undefined;
+  forceCollapsed: boolean;
+}) {
   const { t } = useTranslation();
   if (!parents || parents.length === 0) return null;
   const collapsed = parents.slice(0, -1);
   const lastParent = parents[parents.length - 1];
+  const expandedClass = forceCollapsed ? "hidden shrink-0" : "max-md:hidden shrink-0";
+  const collapsedClass = forceCollapsed ? "shrink-0" : "shrink-0 md:hidden";
   return (
     <>
       {collapsed.flatMap((p) => [
-        <BreadcrumbItem key={`${p.href ?? p.label}-item`} className="shrink-0 max-md:hidden">
+        <BreadcrumbItem key={`${p.href ?? p.label}-item`} className={expandedClass}>
           <ParentCrumbLabel crumb={p} />
         </BreadcrumbItem>,
-        <BreadcrumbSeparator key={`${p.href ?? p.label}-sep`} className="shrink-0 max-md:hidden" />,
+        <BreadcrumbSeparator key={`${p.href ?? p.label}-sep`} className={expandedClass} />,
       ])}
       {collapsed.length > 0 && (
         <>
-          <BreadcrumbItem className="shrink-0 md:hidden">
+          <BreadcrumbItem className={collapsedClass}>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
                   // `BreadcrumbEllipsis` is `aria-hidden`, which hides its own
                   // sr-only text too, so the trigger needs a name of its own.
-                  // `-m-2 p-2` grows the touch target on this phone-only control
-                  // without moving the crumbs around it.
+                  // `-m-2 p-2` grows the touch target on this control without
+                  // moving the crumbs around it.
                   aria-label={t("common:showMoreBreadcrumbs")}
                   className="-m-2 flex cursor-pointer items-center p-2 text-muted-foreground transition-colors hover:text-foreground"
                   data-testid="topbar-crumb-overflow"
@@ -259,7 +293,7 @@ function ParentCrumbs({ parents }: { parents: ParentCrumb[] | undefined }) {
               </DropdownMenuContent>
             </DropdownMenu>
           </BreadcrumbItem>
-          <BreadcrumbSeparator className="shrink-0 md:hidden" />
+          <BreadcrumbSeparator className={collapsedClass} />
         </>
       )}
       <BreadcrumbItem key={`${lastParent.href ?? lastParent.label}-item`} className="shrink-0">
@@ -276,23 +310,15 @@ type TopbarLeadingProps = {
   backLabel: string;
   parents: ParentCrumb[] | undefined;
   title: string;
+  titleSlot?: ReactNode;
   subtitle?: string;
   icon?: ReactNode;
   homeAffordance: "none" | "phone" | "always";
   homeHref: string;
+  crumbsCollapsed: boolean;
 };
 
-function TopbarLeading({
-  variant,
-  backHref,
-  backLabel,
-  parents,
-  title,
-  subtitle,
-  icon,
-  homeAffordance,
-  homeHref,
-}: TopbarLeadingProps) {
+function TopbarLeading({ variant, backLabel, ...breadcrumbProps }: TopbarLeadingProps) {
   if (variant === "root") {
     if (!backLabel) return null;
     return (
@@ -301,17 +327,167 @@ function TopbarLeading({
       </div>
     );
   }
+  return <TopbarBreadcrumb backLabel={backLabel} {...breadcrumbProps} />;
+}
+
+function GhostSeparator() {
+  return <IconChevronRight className="size-3.5 shrink-0" />;
+}
+
+type TopbarGhostProps = {
+  ghostRef: RefObject<HTMLDivElement | null>;
+  backHref: string;
+  backLabel: string;
+  homeAffordance: "none" | "phone" | "always";
+  parents: ParentCrumb[] | undefined;
+  title: string;
+  subtitle?: string;
+};
+
+/**
+ * Invisible measurement row for `useTopbarPressure`. Child order is the hook's
+ * contract: [0] the expanded chain, [1] the collapsed chain, [2] the title
+ * cluster. Mirrors the real crumbs' typography classes so widths transfer.
+ */
+function TopbarGhost({
+  ghostRef,
+  backHref,
+  backLabel,
+  homeAffordance,
+  parents,
+  title,
+  subtitle,
+}: TopbarGhostProps) {
+  const showBack = backHref !== "/" && !!backLabel;
+  const showAlwaysHome = !showBack && homeAffordance === "always";
+  const chain = parents ?? [];
+  const lastParent = chain.length > 0 ? chain[chain.length - 1] : undefined;
+  const lead = showBack ? (
+    <>
+      <IconArrowLeft className="h-3.5 w-3.5 shrink-0" />
+      <span>{backLabel}</span>
+      <GhostSeparator />
+    </>
+  ) : (
+    showAlwaysHome && (
+      <>
+        <IconHome className="h-4 w-4 shrink-0" />
+        <GhostSeparator />
+      </>
+    )
+  );
   return (
-    <TopbarBreadcrumb
-      backHref={backHref}
-      backLabel={backLabel}
-      parents={parents}
-      title={title}
-      subtitle={subtitle}
-      icon={icon}
-      homeAffordance={homeAffordance}
-      homeHref={homeHref}
-    />
+    <div
+      ref={ghostRef}
+      aria-hidden
+      className="pointer-events-none invisible absolute left-0 top-0 -z-10 flex items-center gap-3 whitespace-nowrap text-sm"
+    >
+      <span className="flex items-center gap-1.5">
+        {lead}
+        {chain.map((p, index) => (
+          <span key={`${p.href ?? p.label}-${index}`} className="flex items-center gap-1.5">
+            <span className="max-w-40 truncate">{p.label}</span>
+            <GhostSeparator />
+          </span>
+        ))}
+      </span>
+      <span className="flex items-center gap-1.5">
+        {lead}
+        {chain.length > 1 && (
+          <>
+            <IconDots className="size-4 shrink-0" />
+            <GhostSeparator />
+          </>
+        )}
+        {lastParent && (
+          <>
+            <span className="max-w-40 truncate">{lastParent.label}</span>
+            <GhostSeparator />
+          </>
+        )}
+      </span>
+      <span className="flex items-center gap-2">
+        <span className="font-medium">{title}</span>
+        {subtitle && <span className="text-xs">{subtitle}</span>}
+      </span>
+    </div>
+  );
+}
+
+function TopbarCenter({
+  center,
+  centerClassName,
+}: {
+  center: ReactNode;
+  centerClassName?: string;
+}) {
+  return (
+    <>
+      <div className={cn("relative z-10 flex shrink-0 items-center", centerClassName)}>
+        {center}
+      </div>
+      {/* Balances the growing lead zone so the center floats mid-gap. */}
+      <div aria-hidden className="grow" />
+    </>
+  );
+}
+
+type TopbarRightZoneProps = {
+  zoneRef: RefObject<HTMLDivElement | null>;
+  actions?: ReactNode;
+  overflowActions?: ReactNode;
+  actionsOverflowed: boolean;
+  actionsClassName?: string;
+  showStatusTrigger: boolean;
+};
+
+function TopbarRightZone({
+  zoneRef,
+  actions,
+  overflowActions,
+  actionsOverflowed,
+  actionsClassName,
+  showStatusTrigger,
+}: TopbarRightZoneProps) {
+  const hasCluster = Boolean(actions || overflowActions);
+  if (!hasCluster && !showStatusTrigger) return null;
+  return (
+    <div ref={zoneRef} className="flex shrink-0 items-center gap-3">
+      {hasCluster && (
+        <div className={cn("relative z-10 flex shrink-0 items-center gap-2", actionsClassName)}>
+          {!actionsOverflowed && overflowActions}
+          {actions}
+          {actionsOverflowed && overflowActions != null && (
+            <TopbarActionsOverflow>{overflowActions}</TopbarActionsOverflow>
+          )}
+        </div>
+      )}
+      {showStatusTrigger ? (
+        <AppStatusDrawerTrigger className={cn(hasCluster && "ml-1", "shrink-0")} />
+      ) : null}
+    </div>
+  );
+}
+
+/** Trailing "…" menu the designated overflow actions fold into under pressure. */
+function TopbarActionsOverflow({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label={t("common:showMoreActions")}
+          className="flex cursor-pointer items-center p-1 text-muted-foreground transition-colors hover:text-foreground"
+          data-testid="topbar-actions-overflow"
+        >
+          <IconDots className="size-4" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="flex flex-col gap-1 p-1">
+        {children}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -323,10 +499,12 @@ export const PageTopbar = forwardRef<HTMLElement, PageTopbarProps>(function Page
     backHref = "/",
     backLabel = "Kandev",
     parents,
+    titleSlot,
     leading,
     center,
     leftActions,
     actions,
+    overflowActions,
     variant = "breadcrumb",
     className,
     centerClassName,
@@ -338,52 +516,67 @@ export const PageTopbar = forwardRef<HTMLElement, PageTopbarProps>(function Page
   },
   ref,
 ) {
+  const leadZoneRef = useRef<HTMLDivElement>(null);
+  const ghostRef = useRef<HTMLDivElement>(null);
+  const rightZoneRef = useRef<HTMLDivElement>(null);
+  // Measurement only matters once there is something that can fold.
+  const measured =
+    variant === "breadcrumb" && ((parents?.length ?? 0) > 0 || overflowActions != null);
+  const pressure = useTopbarPressure(
+    { leadZone: leadZoneRef, ghost: ghostRef, rightZone: rightZoneRef },
+    measured,
+  );
   return (
     <header
       ref={ref}
       data-testid={testId}
       className={cn(
-        "relative flex h-10 min-h-11 shrink-0 items-center gap-3 border-b px-3 py-1 md:min-h-10",
+        "relative flex shrink-0 items-center gap-3 border-b px-3 py-1",
+        TOPBAR_HEIGHT_CLASSNAME,
         className,
       )}
     >
-      {leading}
-      <TopbarLeading
-        variant={variant}
-        backHref={backHref}
-        backLabel={backLabel}
-        parents={parents}
-        title={title}
-        subtitle={subtitle}
-        icon={icon}
-        homeAffordance={homeAffordance}
-        homeHref={homeHref ?? linkToTaskOverview()}
+      {measured && (
+        <TopbarGhost
+          ghostRef={ghostRef}
+          backHref={backHref}
+          backLabel={backLabel}
+          homeAffordance={homeAffordance}
+          parents={parents}
+          title={title}
+          subtitle={subtitle}
+        />
+      )}
+      <div ref={leadZoneRef} className="flex min-w-0 grow items-center gap-3">
+        {leading}
+        <TopbarLeading
+          variant={variant}
+          backHref={backHref}
+          backLabel={backLabel}
+          parents={parents}
+          title={title}
+          titleSlot={titleSlot}
+          subtitle={subtitle}
+          icon={icon}
+          homeAffordance={homeAffordance}
+          homeHref={homeHref ?? linkToTaskOverview()}
+          crumbsCollapsed={pressure.crumbsCollapsed}
+        />
+        {leftActions && (
+          <div className="relative z-10 flex shrink-0 items-center gap-1 [&:empty]:hidden">
+            {leftActions}
+          </div>
+        )}
+      </div>
+      {center && <TopbarCenter center={center} centerClassName={centerClassName} />}
+      <TopbarRightZone
+        zoneRef={rightZoneRef}
+        actions={actions}
+        overflowActions={overflowActions}
+        actionsOverflowed={pressure.actionsOverflowed}
+        actionsClassName={actionsClassName}
+        showStatusTrigger={showStatusTrigger}
       />
-      {leftActions && (
-        <div className="relative z-10 flex shrink-0 items-center gap-1 [&:empty]:hidden">
-          {leftActions}
-        </div>
-      )}
-      {center && (
-        <div
-          className={cn(
-            "pointer-events-none absolute left-1/2 top-1/2 z-0 -translate-x-1/2 -translate-y-1/2",
-            centerClassName,
-          )}
-        >
-          <div className="pointer-events-auto">{center}</div>
-        </div>
-      )}
-      {actions && (
-        <div
-          className={cn("relative z-10 ml-auto flex shrink-0 items-center gap-2", actionsClassName)}
-        >
-          {actions}
-        </div>
-      )}
-      {showStatusTrigger ? (
-        <AppStatusDrawerTrigger className={cn(actions ? "ml-1" : "ml-auto", "shrink-0")} />
-      ) : null}
     </header>
   );
 });

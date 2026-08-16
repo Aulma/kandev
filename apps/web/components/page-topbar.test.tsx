@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { PageTopbar } from "./page-topbar";
+import { PageTopbar, TOPBAR_HEIGHT_CLASSNAME } from "./page-topbar";
 
 vi.mock("@/components/app-status-bar/app-status-surface-provider", () => ({
   AppStatusDrawerTrigger: () => null,
@@ -106,5 +106,49 @@ describe("PageTopbar parent crumbs", () => {
     expect(screen.getByRole("link", { name: "Settings" }).closest("li")?.className).not.toContain(
       "max-md:hidden",
     );
+  });
+});
+
+describe("PageTopbar titleSlot", () => {
+  afterEach(cleanup);
+
+  it("renders the slot as the current crumb and keeps title as the accessible name", () => {
+    render(
+      <PageTopbar
+        title="Checkout revamp"
+        titleSlot={<input aria-label="Rename task" defaultValue="Checkout revamp" />}
+      />,
+    );
+
+    const page = document.querySelector('[data-slot="breadcrumb-page"]');
+    expect(page?.getAttribute("aria-label")).toBe("Checkout revamp");
+    expect(screen.getByLabelText("Rename task")).not.toBeNull();
+    // The plain-text title span is replaced, not doubled.
+    expect(screen.queryByText("Checkout revamp")).toBeNull();
+  });
+});
+
+describe("PageTopbar overflow actions", () => {
+  afterEach(cleanup);
+
+  it("renders overflow actions inline while there is room", () => {
+    render(<PageTopbar title="Task" overflowActions={<button type="button">Archive</button>} />);
+
+    expect(screen.getByRole("button", { name: "Archive" })).not.toBeNull();
+    // Without pressure (no layout in the test DOM) the fold never engages.
+    expect(screen.queryByTestId("topbar-actions-overflow")).toBeNull();
+  });
+});
+
+describe("PageTopbar height token", () => {
+  afterEach(cleanup);
+
+  it("applies the shared height token to the header", () => {
+    render(<PageTopbar title="Stats" testId="stats-topbar" />);
+
+    const header = screen.getByTestId("stats-topbar");
+    for (const token of TOPBAR_HEIGHT_CLASSNAME.split(" ")) {
+      expect(header.className).toContain(token);
+    }
   });
 });

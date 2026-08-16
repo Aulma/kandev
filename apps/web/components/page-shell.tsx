@@ -14,11 +14,13 @@ type PageShellProps = {
   backHref?: string;
   backLabel?: string;
   parents?: ParentCrumb[];
+  titleSlot?: ReactNode;
   variant?: "breadcrumb" | "root";
   center?: ReactNode;
   leading?: ReactNode;
   leftActions?: ReactNode;
   actions?: ReactNode;
+  overflowActions?: ReactNode;
   className?: string;
   showStatusTrigger?: boolean;
   /** `data-testid` on the topbar header (e2e anchors like `office-topbar`). */
