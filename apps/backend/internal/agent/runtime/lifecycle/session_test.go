@@ -2131,6 +2131,138 @@ func TestWaitForPromptDone_PublishesSingleStall(t *testing.T) {
 	})
 }
 
+func TestMarkPromptDispatchedArmsActivityAfterDispatch(t *testing.T) {
+	store := NewExecutionStore()
+	execution := &AgentExecution{
+		ID:                         "test-exec",
+		SessionID:                  "test-session",
+		promptGeneration:           3,
+		agentEventSincePrompt:      true,
+		promptActivityEpoch:        2,
+		promptCompletionGeneration: 0,
+	}
+	if err := store.Add(execution); err != nil {
+		t.Fatalf("add execution: %v", err)
+	}
+	sm := NewSessionManager(newSessionTestLogger(), make(chan struct{}))
+	sm.executionStore = store
+
+	sm.markPromptDispatched(execution, 3)
+
+	_, agentEventSeen, epoch := execution.promptActivitySnapshot()
+	if agentEventSeen {
+		t.Fatal("prompt dispatch left the previous activity marker armed")
+	}
+	if epoch != 3 {
+		t.Fatalf("activity epoch = %d, want 3 after dispatch", epoch)
+	}
+}
+
+// TestWaitForPromptDone_StallPayloadDiscriminatesNeverStarted verifies that
+// agentEventSincePrompt (armed false on dispatch, set true only by a genuine
+// agent event) is threaded into the published stall payload's NeverStarted
+// field: dispatch-only silence reports NeverStarted true, and the same
+// execution reports NeverStarted false once a real agent event has recorded
+// activity for the current prompt.
+func TestWaitForPromptDone_StallPayloadDiscriminatesNeverStarted(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		eventBus := &MockEventBusWithTracking{}
+		sm := NewSessionManager(newSessionTestLogger(), make(chan struct{}))
+		sm.eventPublisher = NewEventPublisher(eventBus, newSessionTestLogger())
+		execution := &AgentExecution{
+			ID:           "test-exec",
+			TaskID:       "test-task",
+			SessionID:    "test-session",
+			promptDoneCh: make(chan PromptCompletionSignal, 1),
+		}
+		// Mirrors sendPrompt's dispatch bump: activity timestamp moves, but the
+		// discriminator is armed false because no agent event has arrived yet.
+		execution.lastActivityAt = time.Now()
+		execution.agentEventSincePrompt = false
+
+		ctx, cancel := context.WithCancel(context.Background())
+		t.Cleanup(cancel)
+		waitResult := make(chan error, 1)
+		go func() {
+			_, err := sm.waitForPromptDone(ctx, execution, 7)
+			waitResult <- err
+		}()
+
+		time.Sleep(5 * time.Minute)
+		synctest.Wait()
+
+		payload := lastStalledPayload(t, eventBus)
+		if !payload.NeverStarted {
+			t.Fatalf("NeverStarted = false, want true for dispatch-only silence")
+		}
+
+		cancel()
+		if err := <-waitResult; !errors.Is(err, context.Canceled) {
+			t.Fatalf("waitForPromptDone error = %v, want context canceled", err)
+		}
+	})
+}
+
+func TestWaitForPromptDone_StallPayloadReportsRunningAfterAgentEvent(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		eventBus := &MockEventBusWithTracking{}
+		sm := NewSessionManager(newSessionTestLogger(), make(chan struct{}))
+		sm.eventPublisher = NewEventPublisher(eventBus, newSessionTestLogger())
+		execution := &AgentExecution{
+			ID:           "test-exec",
+			TaskID:       "test-task",
+			SessionID:    "test-session",
+			promptDoneCh: make(chan PromptCompletionSignal, 1),
+			Status:       v1.AgentStatusRunning,
+		}
+		execution.lastActivityAt = time.Now()
+		execution.agentEventSincePrompt = false
+
+		mgr := &Manager{eventPublisher: sm.eventPublisher}
+		mgr.recordActivity(execution, agentctl.AgentEvent{Type: "message_chunk"})
+
+		ctx, cancel := context.WithCancel(context.Background())
+		t.Cleanup(cancel)
+		waitResult := make(chan error, 1)
+		go func() {
+			_, err := sm.waitForPromptDone(ctx, execution, 7)
+			waitResult <- err
+		}()
+
+		time.Sleep(5 * time.Minute)
+		synctest.Wait()
+
+		payload := lastStalledPayload(t, eventBus)
+		if payload.NeverStarted {
+			t.Fatalf("NeverStarted = true, want false once a genuine agent event recorded activity")
+		}
+
+		cancel()
+		if err := <-waitResult; !errors.Is(err, context.Canceled) {
+			t.Fatalf("waitForPromptDone error = %v, want context canceled", err)
+		}
+	})
+}
+
+func lastStalledPayload(t *testing.T, eventBus *MockEventBusWithTracking) AgentStalledPayload {
+	t.Helper()
+	eventBus.mu.Lock()
+	defer eventBus.mu.Unlock()
+	for i := len(eventBus.PublishedEvents) - 1; i >= 0; i-- {
+		te := eventBus.PublishedEvents[i]
+		if te.Subject != "agent.stalled" {
+			continue
+		}
+		payload, ok := te.Event.Data.(AgentStalledPayload)
+		if !ok {
+			t.Fatalf("agent.stalled event data = %#v, want AgentStalledPayload", te.Event.Data)
+		}
+		return payload
+	}
+	t.Fatalf("no agent.stalled event published")
+	return AgentStalledPayload{}
+}
+
 func countPublishedEvents(eventBus *MockEventBusWithTracking, subject string) int {
 	eventBus.mu.Lock()
 	defer eventBus.mu.Unlock()

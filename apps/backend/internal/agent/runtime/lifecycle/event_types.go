@@ -29,19 +29,23 @@ type AgentEventPayload struct {
 }
 
 // AgentStalledPayload describes a prompt that has stopped receiving agent events.
-// It is advisory only; the lifecycle remains running until the provider completes
-// or the user cancels the turn.
+// The activity epoch lets the consumer reject a stale watchdog snapshot. A
+// never-started prompt is terminal only when its snapshot remains current.
 type AgentStalledPayload struct {
 	AgentExecutionID string        `json:"agent_execution_id"`
 	TaskID           string        `json:"task_id"`
 	SessionID        string        `json:"session_id"`
 	PromptGeneration uint64        `json:"prompt_generation"`
+	ActivityEpoch    uint64        `json:"activity_epoch,omitempty"`
 	LastActivityAt   time.Time     `json:"last_activity_at"`
 	StalledFor       time.Duration `json:"stalled_for"`
 	ToolCallID       string        `json:"tool_call_id,omitempty"`
 	ToolName         string        `json:"tool_name,omitempty"`
 	ToolTitle        string        `json:"tool_title,omitempty"`
 	ToolStatus       string        `json:"tool_status,omitempty"`
+	// NeverStarted is true when the agent has not emitted a single event since
+	// this prompt was dispatched — a terminal failure, not a mid-work pause.
+	NeverStarted bool `json:"never_started"`
 }
 
 // AgentctlEventPayload is the payload for agentctl lifecycle events (starting, ready, error).
