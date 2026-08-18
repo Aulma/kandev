@@ -138,9 +138,14 @@ type PromptUsageData struct {
 // true when the token counts are not authoritative for a complete turn: the
 // adapter synthesised them (codex-acp cumulative-delta inference), or the
 // provider returned a frame that covers only part of the turn.
+// OutputTokensPresent distinguishes an observed zero from a missing
+// output-token sample. The pointer is nil only for legacy events that
+// predate this field, so the subscriber can apply the old inference rule to
+// those events without overriding an explicit false from a new event.
 type UsageTokens struct {
 	InputTokens                  int64 `json:"input_tokens"`
 	OutputTokens                 int64 `json:"output_tokens"`
+	OutputTokensPresent          *bool `json:"output_tokens_present,omitempty"`
 	CachedReadTokens             int64 `json:"cached_read_tokens"`
 	CachedWriteTokens            int64 `json:"cached_write_tokens"`
 	ThoughtTokens                int64 `json:"thought_tokens,omitempty"`

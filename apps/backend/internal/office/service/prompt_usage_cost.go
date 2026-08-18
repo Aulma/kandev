@@ -10,25 +10,6 @@ import (
 	"github.com/kandev/kandev/internal/office/shared"
 )
 
-// costContractVersion is the in-band activation point for the cache-split /
-// cost-provenance / turn-attribution columns (docs/specs/office/costs.md).
-// The Rill cost extract has no schema versioning of its own, so a row
-// written under a prior contract is distinguished by comparing
-// cost_contract_version, not by a date an analyst has to be told out of
-// band. Bump whenever the contract's meaning changes.
-//
-// v1 → v2: on the CostSourceUnpriced path, v1 forced Estimated=true
-// regardless of data.Usage.Estimated, conflating "we could not resolve a
-// price" with "the token counts themselves were synthesised" — two
-// different signals this same contract introduced CostSource specifically
-// to keep separate. v2 preserves data.Usage.Estimated verbatim on every
-// path (see resolveCostForUsage); cost_source=unpriced alone now carries
-// the pricing-failure signal.
-//
-// v2 → v3: Estimated also marks typed usage frames that cover only part of a
-// turn, such as Codex's last model request in a multi-request turn.
-const costContractVersion int64 = 3
-
 // costResolution is resolveCostForUsage's output: the priced cost plus
 // everything needed to record provenance on the row. Kept separate from
 // models.CostEvent so this package's cost-resolution logic doesn't need to
@@ -51,8 +32,8 @@ type costResolution struct {
 // configured the row is unpriced. Estimated is data.Usage.Estimated
 // verbatim on every branch, including unpriced: whether the tokens were
 // synthesised and whether a price could be resolved are independent facts,
-// and cost_source=unpriced already carries the second one — see the
-// costContractVersion history above.
+// and cost_source=unpriced already carries the second one — see
+// models.CostContractVersion's contract history.
 func (s *Service) resolveCostForUsage(ctx context.Context, data PromptUsageData) costResolution {
 	if data.Usage.ProviderReportedCostPresent || data.Usage.ProviderReportedCostSubcents > 0 {
 		return costResolution{
@@ -137,6 +118,12 @@ func (s *Service) lookupPricingWithVersion(
 // on every row regardless — a definite total whether or not the split is
 // known — so existing consumers (the tree-holds rollup, card 2faa29da's
 // task_sessions fix) are unaffected.
+//
+// TokensOut uses OutputTokensPresent to keep an observed zero distinct from
+// an absent sample. For events written before the presence flag existed, a
+// non-estimated count or a nonzero count remains observed. The only production
+// shape with no output sample is adapter_prompt.go's estimated
+// context-occupancy fallback.
 func buildCostEvent(
 	data PromptUsageData, fields *sqlite.TaskExecutionFields, projectID, provider string,
 	resolution costResolution, sessionAgentProfileID string,
@@ -154,14 +141,18 @@ func buildCostEvent(
 		Provider:       provider,
 		TokensIn:       data.Usage.InputTokens,
 		TokensCachedIn: data.Usage.CachedReadTokens + data.Usage.CachedWriteTokens,
-		TokensOut:      data.Usage.OutputTokens,
 		CostSubcents:   resolution.costSubcents,
 		Estimated:      resolution.estimated,
 		CostSource:     &resolution.source,
 		OccurredAt:     time.Now().UTC(),
 	}
-	contractVersion := costContractVersion
+	contractVersion := models.CostContractVersion
 	event.CostContractVersion = &contractVersion
+
+	if outputTokensObserved(data.Usage) {
+		outputTokens := data.Usage.OutputTokens
+		event.TokensOut = &outputTokens
+	}
 
 	if data.Usage.CachedReadTokens != 0 || data.Usage.CachedWriteTokens != 0 {
 		cachedRead := data.Usage.CachedReadTokens
@@ -188,4 +179,11 @@ func buildCostEvent(
 		event.UsageEventID = &usageEventID
 	}
 	return event
+}
+
+func outputTokensObserved(usage UsageTokens) bool {
+	if usage.OutputTokensPresent != nil {
+		return *usage.OutputTokensPresent
+	}
+	return !usage.Estimated || usage.OutputTokens != 0
 }

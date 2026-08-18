@@ -45,7 +45,7 @@ Office adds per-session cost estimation, aggregated views by agent/project/model
 | `tokens_cached_in` | int64 | cached input tokens (prompt caching). Always `= tokens_cached_read + tokens_cached_write` when the split is known; kept for existing rollup consumers (see `TaskSession additions` below) |
 | `tokens_cached_read` | int64, nullable | cached-read portion of `tokens_cached_in`. NULL for legacy rows (pre-contract-v2) and when no cache data was reported - never `0`, since a missing split is not proof of zero cache usage |
 | `tokens_cached_write` | int64, nullable | cached-write portion of `tokens_cached_in`. Same NULL rule as `tokens_cached_read` - cache write and cache read price at different per-million rates, so the split matters |
-| `tokens_out` | int64 | output token count |
+| `tokens_out` | int64, nullable | output token count. NULL means "never observed". New normalized prompt usage always carries `output_tokens_present` separately from the numeric value. Thus, an observed zero is stored as `0`, while the adapter_prompt.go context-occupancy fallback stores NULL because it cannot observe output tokens. For a legacy event without the presence field, the subscriber keeps the old rule: a non-estimated value or a nonzero value is observed. A downstream per-output-token measure can distinguish both states (contract v3) |
 | `cost_subcents` | int64 | hundredths of a cent (renamed from `cost_cents`). UI divides by 10000 |
 | `estimated` | bool | true when token counts are not authoritative for a complete turn: the adapter synthesised them (for example, codex-acp cumulative-delta inference), or the provider frame covers only part of the turn (for example, Codex's last request). Independent of `cost_source` |
 | `turn_id` | string, nullable | the turn this event was recorded at completion of. NULL when no turn could be resolved (e.g. an error/interrupt completion outside the normal ready path) |
@@ -53,7 +53,7 @@ Office adds per-session cost estimation, aggregated views by agent/project/model
 | `cost_source` | enum, nullable | `provider_reported` \| `models_dev_list` \| `unpriced`. Records which layer of the two-layer lookup below actually produced `cost_subcents` - distinct from `estimated`. NULL for legacy rows |
 | `rate_input_per_million` / `rate_cached_read_per_million` / `rate_cached_write_per_million` / `rate_output_per_million` | int64, nullable | the four models.dev rates actually applied, in subcents-per-million-tokens. Populated only when `cost_source = models_dev_list`; NULL otherwise (including `provider_reported`, where no rate table applies) |
 | `pricing_catalog_version` | string, nullable | the models.dev cache's "as-of" identifier (RFC3339 load/fetch time - the dataset has no version field of its own) that produced the applied rates. Populated only when `cost_source = models_dev_list` |
-| `cost_contract_version` | int64, nullable | in-band activation marker for this row's column semantics, since the point-in-time Rill extract has no schema versioning of its own. Current value `3` (v1 -> v2 separated pricing failure from token synthesis; v2 -> v3 also marks partial-turn typed usage as estimated). NULL for legacy pre-contract rows - never backfilled |
+| `cost_contract_version` | int64, nullable | in-band activation marker for this row's column semantics, since the point-in-time Rill extract has no schema versioning of its own. Current value `3` (v2 -> v3: `tokens_out` became nullable, normalized usage gained an explicit output-token presence signal, and partial-turn typed usage became estimated; v1 -> v2: the unpriced path stopped forcing `estimated=true`, see the `estimated` row above). NULL for legacy pre-contract rows - never backfilled |
 | `provider_event_id` | string | null for wire-side rows; non-null for disk-runner rows. Format `ccusage:<provider>:<session_id>:<model>` |
 | `provider_credits` | int64 | amp `credits` field (null elsewhere) |
 | `occurred_at` | timestamp | when the cost was incurred |
@@ -82,7 +82,7 @@ Multiple policies can apply to the same scope (e.g. monthly + total).
 
 ### `TaskSession` additions
 
-`cost_subcents`, `tokens_in`, `tokens_out`, `tokens_cached_in` incrementally updated as cost events arrive, providing quick per-session totals without scanning `office_cost_events`. `tokens_cached_in` is DB-only today (no model/DTO/API/web reader) - it exists so the rollup reconciles column-for-column against the ledger; a future cost-explorer surface will expose it. The rollup consumes only the merged `tokens_cached_in` sum, not the `tokens_cached_read` / `tokens_cached_write` split - the split exists solely on the ledger row for cost-per-token-type analysis (contract v2); it does not change what the rollup total means or how it is computed.
+`cost_subcents`, `tokens_in`, `tokens_out`, and `tokens_cached_in` are incrementally updated as cost events arrive. They provide quick per-session totals without a scan of `office_cost_events`. An unknown ledger `tokens_out` value contributes zero to the numeric rollup. Therefore, the session output total is a lower bound when at least one ledger row has `tokens_out=NULL`. Consumers that need completeness must read the raw ledger. `tokens_cached_in` is DB-only today (no model/DTO/API/web reader). It exists so the rollup reconciles column-for-column against the ledger. The rollup consumes only the merged `tokens_cached_in` sum, not the `tokens_cached_read` / `tokens_cached_write` split. The split exists solely on the ledger row for cost-per-token-type analysis (contract v2).
 
 ### Per-agent budget
 
@@ -118,6 +118,10 @@ replaced successfully.
 
 ## API surface
 
+The raw cost-list response always includes `tokens_out`. It contains a number
+for an observed count and JSON `null` for an unknown count. It does not omit
+the field when the count is unknown.
+
 ### Cost resolution (two-layer lookup)
 
 1. **Provider-reported cost** (`cost_source = provider_reported`). If the CLI emits cumulative USD session cost on `usage_update`, subtract the previously consumed session baseline and store the nonnegative turn delta as `int64(amount * 10000)` hundredths-of-a-cent. Ignore non-USD cost values. This is the only accurate path for claude-acp. No rate columns are recorded on this path.
@@ -147,6 +151,11 @@ Aggregated on read (not pre-computed):
 - **By task**: total across all sessions.
 - **By model**: spend broken down by model.
 - **By time**: daily/weekly/monthly trends.
+
+SQL token aggregates skip NULL values. Thus, an aggregate output-token total
+is a lower bound if one or more source rows have unknown output counts. Cost
+totals still include those rows. Use the raw cost-list response when a consumer
+must determine if an output-token total is complete.
 
 ### Cost explorer UI routes
 
@@ -203,9 +212,9 @@ There is no per-field permission model. Conformance tests should assert that cos
 **Survives restart:**
 
 - `office_cost_events` rows (full history, never trimmed). Disk-runner rows keyed by `(session_id, provider_event_id)` survive re-ingestion without duplicating; wire-side rows are additionally deduplicated by the unique `usage_event_id` partial index (contract v2). The wire-side `estimated=true` rows for codex are deleted once the matching aggregate row lands.
-- **Contract v2 column semantics never change value mid-series.** Legacy rows (written before contract v2) read NULL, never `0`, for every new column - the downstream point-in-time extract has no schema versioning, so a column whose meaning flips from "not recorded" to "recorded as zero" partway through the series would be silently discontinuous. `cost_contract_version` on each row is the in-band marker a consumer checks instead of inferring from a date. Contract v3 changes the meaning of `estimated` for new rows only; legacy rows keep their recorded value.
+- **Column semantics never change value mid-series across a contract bump.** Legacy rows (written before a column's semantics changed) read NULL, never `0`, for a newly nullable value - the downstream point-in-time extract has no schema versioning, so a column whose meaning flips from "not recorded" to "recorded as zero" (or vice versa) partway through the series would be silently discontinuous. This applies both to columns introduced by contract v2 and to `tokens_out`, an existing column whose contract became nullable in v3: pre-v3 rows read `0`, not NULL, for `tokens_out`. Contract v3 changes the meaning of `estimated` for new rows only; legacy rows keep their recorded value. `cost_contract_version` on each row is the in-band marker a consumer checks instead of inferring from a date.
 - `office_budget_policies` rows.
-- `TaskSession.cost_subcents` / `tokens_in` / `tokens_out` / `tokens_cached_in` running totals, kept in sync with `office_cost_events` so per-session totals are correct without a re-scan - written atomically with the ledger insert (see `Failure modes` above), so the two can never diverge on a partial write.
+- `TaskSession.cost_subcents` / `tokens_in` / `tokens_out` / `tokens_cached_in` running totals. The ledger insert and rollup increment are atomic (see `Failure modes` above), so they cannot diverge on a partial write. The numeric `tokens_out` rollup is a lower bound when a source row has an unknown output count.
 - Per-agent `budget_monthly_cents` stored on the agent instance row.
 - Per-model pricing overrides stored in workspace settings.
 - The on-disk `models.dev` cache at `<data-dir>/cache/models-dev.json`. Recovery on next boot: the in-memory pricing map is empty until first query; queries fall back to the on-disk file when the background refresh has not yet completed.
@@ -234,6 +243,10 @@ No TTL or retention is applied to `office_cost_events`; rows accumulate for the 
 - **GIVEN** a codex-acp turn using the context-occupancy-growth fallback (no typed usage frame available; tokens synthesised from `usage_update.used` growth, `estimated=true`), **WHEN** the cost event is recorded, **THEN** `tokens_cached_read` and `tokens_cached_write` are NULL (never `0`) because the split was never observed, while `tokens_cached_in` and `cost_subcents` are still recorded from the synthesised totals.
 
 - **GIVEN** a codex-acp 1.4.0+ turn whose typed usage frame reports a nonzero cache split, **WHEN** the cost event is recorded, **THEN** `estimated=true` (the frame is the last request only, not a per-turn total) and `tokens_cached_read`/`tokens_cached_write` are stored as the reported split. When the frame's cache fields are both zero, the split is stored as NULL rather than `0/0`, matching the "split never observed" rule above rather than distinguishing a reported zero from an absent field.
+
+- **GIVEN** a synthesised-usage turn (`estimated=true`, no output token count observed, a provider-reported cost sample present), **WHEN** the cost event is recorded, **THEN** `tokens_out` is NULL (never `0`) even though `cost_subcents` is positive. A row must not present an unmeasured output count as a measured zero.
+
+- **GIVEN** an estimated turn with `output_tokens_present=true` and `output_tokens=0`, **WHEN** the cost event is recorded, **THEN** `tokens_out` is a non-NULL zero because the adapter observed the value.
 
 - **GIVEN** a turn priced via the models.dev lookup, **WHEN** the cost event is recorded, **THEN** `cost_source=models_dev_list` and the row carries the four `rate_*_per_million` values and `pricing_catalog_version` actually applied, distinguishable from a provider-reported row (`cost_source=provider_reported`, no rate columns) and an unpriced row (`cost_source=unpriced`, `cost_subcents=0`).
 
