@@ -1223,6 +1223,7 @@
   "sortCreated": "建立時間",
   "sortCustom": "自訂",
   "sortDirection": "排序方向 {{direction}}",
+  "sortLastActivity": "最後活動",
   "sortStatus": "狀態",
   "sortTitle": "標題",
   "sortUpdated": "更新時間",
