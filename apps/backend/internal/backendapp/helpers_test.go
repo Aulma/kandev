@@ -1980,6 +1980,7 @@ func newBootStateTestHarness(t *testing.T) bootStateTestHarness {
 			Sessions:         taskRepo,
 			GitSnapshots:     taskRepo,
 			RepoEntities:     taskRepo,
+			RepositorySets:   taskRepo,
 			Executors:        taskRepo,
 			Environments:     taskRepo,
 			TaskEnvironments: taskRepo,
