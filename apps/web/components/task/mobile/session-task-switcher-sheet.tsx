@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState, memo } from "react";
 import { useTranslation } from "react-i18next";
-import { IconCheck, IconMessageCircle, IconNetwork, IconPlus } from "@tabler/icons-react";
+import { IconCheck, IconNetwork, IconPlus } from "@tabler/icons-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@kandev/ui/sheet";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@kandev/ui/drawer";
 import { Button } from "@kandev/ui/button";
+import { QuickChatSheetButton } from "./quick-chat-sheet-button";
 import { TaskSwitcher } from "../task-switcher";
 import type { TaskSwitcherItem, TaskSwitcherProps } from "../task-switcher";
 import { SidebarFilterBar } from "../sidebar-filter/sidebar-filter-bar";
@@ -229,18 +230,7 @@ function TaskSwitcherSurfaceHeader({
           <SheetTitle className="text-base">{t("task:tasks")}</SheetTitle>
         )}
         <div className="flex items-center gap-2">
-          {workspaceId && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 gap-1 cursor-pointer"
-              onClick={onQuickChat}
-              data-testid="mobile-sheet-quick-chat"
-            >
-              <IconMessageCircle className="h-4 w-4" />
-              {t("task:chat")}
-            </Button>
-          )}
+          {workspaceId && <QuickChatSheetButton workspaceId={workspaceId} onClick={onQuickChat} />}
           <Button
             size="sm"
             variant="outline"
