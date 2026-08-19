@@ -115,7 +115,16 @@ export function useTopbarPressure(refs: TopbarPressureRefs, enabled: boolean): T
     };
 
     const resizeObserver = new ResizeObserver(measure);
+    // The lead zone's own width is not enough. `measureAvailable` subtracts the
+    // width of each shrink-0 sibling, and a left action can appear, disappear,
+    // or change width while the container stays exactly as wide — a resize the
+    // container alone never reports. Observing the measured children is what
+    // makes the subtraction and the trigger cover the same set of boxes.
+    const observeChildren = () => {
+      for (const child of leadZone.children) resizeObserver.observe(child as HTMLElement);
+    };
     resizeObserver.observe(leadZone);
+    observeChildren();
     if (refs.rightZone.current) resizeObserver.observe(refs.rightZone.current);
     // Ghost content changes when titles or crumb labels change. Labels render
     // as CSS generated content from data-label, so attribute mutations are the
@@ -127,10 +136,18 @@ export function useTopbarPressure(refs: TopbarPressureRefs, enabled: boolean): T
       attributes: true,
       attributeFilter: ["data-label"],
     });
+    // A left action that mounts later is a new box to observe, not just a new
+    // width. Re-observing is idempotent, so the whole child list is re-armed.
+    const leadZoneObserver = new MutationObserver(() => {
+      observeChildren();
+      measure();
+    });
+    leadZoneObserver.observe(leadZone, { childList: true });
     measure();
     return () => {
       resizeObserver.disconnect();
       mutationObserver.disconnect();
+      leadZoneObserver.disconnect();
     };
   }, [refs.leadZone, refs.ghost, refs.rightZone, enabled]);
 
