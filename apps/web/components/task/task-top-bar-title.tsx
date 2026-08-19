@@ -41,7 +41,10 @@ export function TaskTopBarTitle({ taskId, taskTitle, isArchived }: TaskTopBarTit
 
   const handleTitleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLSpanElement>) => {
-      if (e.key === "Enter") {
+      // Both keys, because the idle title announces itself as a button and a
+      // button that ignores Space is a promise the control does not keep.
+      // Space would also scroll the page, hence the preventDefault on it.
+      if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
         startEditing();
       }
@@ -95,9 +98,13 @@ export function TaskTopBarTitle({ taskId, taskTitle, isArchived }: TaskTopBarTit
   }
 
   // The surrounding PageTopbar title crumb owns the breadcrumb semantics
-  // (role, aria-current, accessible name); this renders only the interactive
-  // rename control. When renameable it is keyboard-operable (tab + Enter) so
-  // AT and pointer-actionability checks see a working control.
+  // (aria-current, position in the trail); this renders only the interactive
+  // rename control. When renameable it is a real control — focusable, named by
+  // its own text, and announced as a button, which is what it behaves like:
+  // activating it opens the inline editor. Without a role it would be a
+  // focusable span, reaching AT as unlabelled plain text. When it is not
+  // renameable it is exactly that, plain text, so it takes no role and leaves
+  // the tab order.
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -105,6 +112,7 @@ export function TaskTopBarTitle({ taskId, taskTitle, isArchived }: TaskTopBarTit
           ref={titleRef}
           data-testid="task-topbar-title"
           className="block min-w-0 max-w-full truncate text-sm rounded-sm font-medium outline-none focus-visible:ring-[2px] focus-visible:ring-ring/35"
+          role={canRename ? "button" : undefined}
           aria-disabled={!canRename}
           tabIndex={canRename ? 0 : undefined}
           onDoubleClick={startEditing}
