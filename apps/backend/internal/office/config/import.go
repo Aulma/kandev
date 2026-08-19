@@ -115,9 +115,21 @@ func (s *ConfigService) previewProjects(
 func (s *ConfigService) ApplyImport(
 	ctx context.Context, workspaceID string, bundle *ConfigBundle,
 ) (*ImportResult, error) {
+	return s.applyImport(ctx, workspaceID, bundle, true)
+}
+
+// applyImport applies a bundle with the reports_to lookup policy for its
+// caller. Direct bundle imports may reference an existing manager that is not
+// in the bundle. Filesystem syncs are authoritative snapshots, so they must
+// resolve only against agents present in the snapshot before stale rows are
+// pruned.
+func (s *ConfigService) applyImport(
+	ctx context.Context, workspaceID string, bundle *ConfigBundle,
+	allowExternalManagers bool,
+) (*ImportResult, error) {
 	result := &ImportResult{}
 
-	if err := s.applyAgents(ctx, workspaceID, bundle.Agents, result); err != nil {
+	if err := s.applyAgents(ctx, workspaceID, bundle.Agents, result, allowExternalManagers); err != nil {
 		return nil, fmt.Errorf("apply agents: %w", err)
 	}
 	if err := s.applySkills(ctx, workspaceID, bundle.Skills, result); err != nil {
@@ -139,6 +151,7 @@ func (s *ConfigService) ApplyImport(
 
 func (s *ConfigService) applyAgents(
 	ctx context.Context, wsID string, incoming []AgentConfig, result *ImportResult,
+	allowExternalManagers bool,
 ) error {
 	existing, err := s.repo.ListAgentInstances(ctx, wsID)
 	if err != nil {
@@ -178,7 +191,71 @@ func (s *ConfigService) applyAgents(
 			result.CreatedCount++
 		}
 	}
+	return s.applyAgentReportsTo(ctx, wsID, incoming, result, allowExternalManagers)
+}
+
+// applyAgentReportsTo resolves each incoming agent's reports_to name to the
+// target agent's ID and persists it. It runs after every agent in the bundle
+// has been created or updated above, so it re-lists the workspace to pick up
+// IDs assigned to newly-created rows — this makes resolution independent of
+// bundle order. When allowExternalManagers is true, a reports_to name may
+// also reference an agent that is only in the workspace. Filesystem syncs pass
+// false because the snapshot is authoritative and rows absent from it are
+// pruned after this import. A name that resolves to nothing (dangling
+// reference) or to the agent itself is recorded as a warning and left empty
+// rather than failing the import.
+func (s *ConfigService) applyAgentReportsTo(
+	ctx context.Context, wsID string, incoming []AgentConfig, result *ImportResult,
+	allowExternalManagers bool,
+) error {
+	current, err := s.repo.ListAgentInstances(ctx, wsID)
+	if err != nil {
+		return fmt.Errorf("resolve reports_to: list agents: %w", err)
+	}
+	byName := make(map[string]*models.AgentInstance, len(current))
+	incomingNames := bundleAgentSet(incoming)
+	for _, a := range current {
+		if !allowExternalManagers && !incomingNames[a.Name] {
+			continue
+		}
+		byName[a.Name] = a
+	}
+	for _, cfg := range incoming {
+		agent, ok := byName[cfg.Name]
+		if !ok {
+			continue
+		}
+		reportsTo, warning := resolveReportsTo(cfg, byName)
+		if warning != "" {
+			result.Warnings = append(result.Warnings, warning)
+		}
+		if agent.ReportsTo == reportsTo {
+			continue
+		}
+		agent.ReportsTo = reportsTo
+		if err := s.repo.UpdateAgentInstance(ctx, agent); err != nil {
+			return fmt.Errorf("resolve reports_to: update %q: %w", agent.Name, err)
+		}
+	}
 	return nil
+}
+
+// resolveReportsTo resolves cfg.ReportsTo (a name) against byName (a name ->
+// agent index built from the target workspace after apply). It returns the
+// resolved manager ID, or an empty string plus a warning when the name is a
+// self-reference or does not match any known agent.
+func resolveReportsTo(cfg AgentConfig, byName map[string]*models.AgentInstance) (string, string) {
+	if cfg.ReportsTo == "" {
+		return "", ""
+	}
+	if cfg.ReportsTo == cfg.Name {
+		return "", fmt.Sprintf("agent %q cannot report to itself", cfg.Name)
+	}
+	manager, ok := byName[cfg.ReportsTo]
+	if !ok {
+		return "", fmt.Sprintf("agent %q reports_to %q, which was not found", cfg.Name, cfg.ReportsTo)
+	}
+	return manager.ID, ""
 }
 
 func (s *ConfigService) applySkills(
