@@ -1,14 +1,12 @@
 "use client";
 
-import { memo, useEffect, useState, type ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 import Link from "@/components/routing/app-link";
 import { IconBug, IconCircleDot } from "@tabler/icons-react";
 import { Button } from "@kandev/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@kandev/ui/tooltip";
 import { PageTopbar } from "@/components/page-topbar";
-import { useAppStore } from "@/components/state-provider";
-import { selectOfficeProject } from "@/lib/state/slices/office/selectors";
-import { getProject } from "@/lib/api/domains/office-api";
+import { useOfficeProject } from "@/hooks/use-office-workspace-data";
 import { TaskTopBarTitle } from "@/components/task/task-top-bar-title";
 import { EditorsMenu } from "@/components/task/editors-menu";
 import { LayoutPresetSelector } from "@/components/task/layout-preset-selector";
@@ -49,34 +47,6 @@ type TaskTopBarProps = {
   onTaskUnarchived?: (taskId: string) => void;
 };
 
-/**
- * The task's owning project, for the ancestor crumb. The office store is the
- * source when warm; a cold-loaded /t/:id boots without the office collections,
- * so a store miss falls back to fetching the record once. Projects only exist
- * for office-owned tasks, so kanban-mode tasks simply render no trail.
- */
-function useTaskProject(projectId: string | null | undefined) {
-  const storeProject = useAppStore((s) => selectOfficeProject(s, projectId));
-  const [fetched, setFetched] = useState<{ id: string; name: string } | null>(null);
-
-  useEffect(() => {
-    if (!projectId || storeProject) return;
-    let cancelled = false;
-    getProject(projectId)
-      .then((res) => {
-        if (!cancelled) setFetched({ id: res.id, name: res.name });
-      })
-      // A missing crumb is the harmless failure mode; the page stays usable.
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [projectId, storeProject]);
-
-  if (storeProject) return storeProject;
-  return fetched && fetched.id === projectId ? fetched : undefined;
-}
-
 const TaskTopBar = memo(function TaskTopBar({
   taskId,
   activeSessionId,
@@ -97,7 +67,9 @@ const TaskTopBar = memo(function TaskTopBar({
   onTaskUnarchived,
 }: TaskTopBarProps) {
   const { t } = useTranslation();
-  const project = useTaskProject(projectId);
+  // Projects only exist for office-owned tasks, so kanban-mode tasks render no
+  // ancestry trail at all.
+  const project = useOfficeProject(projectId);
   const showExecutorSettings =
     !isArchived && shouldShowExecutorEnvironmentControls(remoteExecutorType);
   return (

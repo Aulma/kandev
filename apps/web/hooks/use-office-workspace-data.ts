@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useAppStore, useAppStoreApi } from "@/components/state-provider";
 import { useFeature } from "@/hooks/domains/features/use-feature";
 import { useOfficeRefetch } from "@/hooks/use-office-refetch";
 import { getInbox, getMeta, listAgentProfiles, listProjects } from "@/lib/api/domains/office-api";
 import type { ApiRequestOptions } from "@/lib/api/client";
 import type { AppState } from "@/lib/state/store";
+import { selectOfficeProject } from "@/lib/state/slices/office/selectors";
+import type { Project } from "@/lib/state/slices/office/types";
 import { isOfficeWorkspace, selectActiveWorkspace } from "@/lib/state/slices/workspace/selectors";
 import type { StoreApi } from "zustand";
 
@@ -57,6 +59,43 @@ export async function loadOfficeProjects(
   const response = await listProjects(workspaceId, options).catch(() => null);
   if (!response || !isLatestRequest(store, key, sequence)) return;
   store.getState().setProjects(workspaceId, response.projects ?? []);
+}
+
+/**
+ * One project, read from the store, for surfaces that can boot without the
+ * office collections — a cold `/t/:id` hydrates the task but not the
+ * workspace's projects, so the ancestry crumb would have nothing to name.
+ *
+ * A miss triggers `loadOfficeProjects`, the same workspace-level action the
+ * office chrome uses. Going through the store rather than fetching into
+ * component state is what keeps the two callers on one write path: the record
+ * is shared instead of duplicated, later workspace refreshes update this crumb
+ * too, and the loader's newest-request rule still decides who wins.
+ *
+ * One attempt per (workspace, project). A failed load leaves the crumb absent,
+ * which is the harmless failure mode; retrying on every render is not.
+ */
+export function useOfficeProject(projectId: string | null | undefined): Project | undefined {
+  const store = useAppStoreApi();
+  const officeEnabled = useFeature("office");
+  const activeWorkspace = useAppStore(selectActiveWorkspace);
+  const project = useAppStore((state) => selectOfficeProject(state, projectId));
+  const requestedKey = useRef<string | null>(null);
+
+  const workspaceId =
+    activeWorkspace && officeEnabled && isOfficeWorkspace(activeWorkspace)
+      ? activeWorkspace.id
+      : null;
+
+  useEffect(() => {
+    if (!projectId || !workspaceId || project) return;
+    const key = `${workspaceId}:${projectId}`;
+    if (requestedKey.current === key) return;
+    requestedKey.current = key;
+    void loadOfficeProjects(store, workspaceId, { cache: "no-store" });
+  }, [project, projectId, store, workspaceId]);
+
+  return project;
 }
 
 /** Loads one workspace's inbox with shared stale-response protection. */
