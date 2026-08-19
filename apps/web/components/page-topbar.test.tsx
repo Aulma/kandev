@@ -158,6 +158,53 @@ describe("PageTopbar overflow actions", () => {
   });
 });
 
+describe("PageTopbar free width", () => {
+  afterEach(cleanup);
+
+  function zones(testId: string) {
+    const header = screen.getByTestId(testId);
+    // Lead zone first, trailing zone last: the ghost row is absolute and the
+    // center is only rendered when a bar asks for one.
+    const flexZones = Array.from(header.children).filter((el) =>
+      el.className.includes("items-center gap-3"),
+    );
+    return { lead: flexZones[0], right: flexZones[flexZones.length - 1] };
+  }
+
+  it("gives the slack to the lead zone by default", () => {
+    render(
+      <PageTopbar title="Tasks" testId="lead-slack" actions={<button type="button">A</button>} />,
+    );
+
+    const { lead, right } = zones("lead-slack");
+    expect(lead?.className).toContain("grow");
+    // A default action cluster is `shrink-0`, so the zone stays at full width
+    // and every shrink lands on the lead side.
+    expect(right?.className).toContain("shrink");
+    expect(right?.className).not.toContain("grow");
+  });
+
+  it("hands the slack to the actions when the cluster is the flexible one", () => {
+    render(
+      <PageTopbar
+        title="Tasks"
+        testId="actions-slack"
+        freeWidth="actions"
+        actionsClassName="min-w-0 flex-1 !shrink"
+        actions={<button type="button">A</button>}
+      />,
+    );
+
+    const { lead, right } = zones("actions-slack");
+    // Without this the `flex-1` cluster resolves to zero width — its base size
+    // is 0 and a shrink-only zone never grows to give it any.
+    expect(right?.className).toContain("grow");
+    expect(right?.className).toContain("min-w-0");
+    // And the lead zone must stop spreading, or it takes the slack first.
+    expect(lead?.className).not.toContain("grow");
+  });
+});
+
 describe("PageTopbar height token", () => {
   afterEach(cleanup);
 

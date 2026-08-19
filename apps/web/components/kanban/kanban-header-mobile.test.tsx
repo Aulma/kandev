@@ -10,13 +10,15 @@ vi.mock("@/components/page-topbar", () => ({
     leading,
     leftActions,
     actions,
+    freeWidth,
   }: {
     title?: string;
     leading?: ReactNode;
     leftActions?: ReactNode;
     actions?: ReactNode;
+    freeWidth?: "lead" | "actions";
   }) => (
-    <header>
+    <header data-free-width={freeWidth}>
       {leading}
       <span data-testid="topbar-title">{title}</span>
       <div data-testid="topbar-left-actions">{leftActions}</div>
@@ -139,6 +141,16 @@ describe("KanbanHeaderMobile", () => {
     const quickChat = screen.getByTestId("mobile-quick-chat-hit-target");
     const search = screen.getByTestId("mobile-search-toggle");
     expect(quickChat.nextElementSibling).toBe(search);
+  });
+
+  it("hands the bar's leftover width to the scrolling action strip", () => {
+    renderHeader("Home", ACTIVE_WORKSPACE_ID, vi.fn());
+
+    // The strip is `flex-1`, so its base size is zero. If the lead zone keeps
+    // the slack the strip resolves to zero width, the actions become
+    // unreachable, and the bar renders brand, empty middle, menu.
+    const bar = screen.getByTestId("mobile-topbar-action-strip").closest("header");
+    expect(bar?.getAttribute("data-free-width")).toBe("actions");
   });
 
   it("keeps the brand and menu outside the middle action strip", () => {

@@ -75,6 +75,16 @@ type PageTopbarProps = {
    */
   overflowActions?: ReactNode;
   className?: string;
+  /**
+   * Which zone absorbs the bar's leftover width. "lead" (default) lets the
+   * breadcrumb side spread out and keeps the actions at their natural size,
+   * which is what every titled desktop bar wants. "actions" hands the slack to
+   * the trailing zone instead, for a bar whose action cluster is itself
+   * flexible (the phone bar's scrolling strip): that cluster is `flex-1`, so
+   * its base size is zero, and inside a zone that cannot grow it would resolve
+   * to zero width no matter how much room the bar has.
+   */
+  freeWidth?: "lead" | "actions";
   centerClassName?: string;
   actionsClassName?: string;
   /** Phone-only Status entry point. Turn off where native route chrome owns it. */
@@ -455,6 +465,7 @@ type TopbarRightZoneProps = {
   overflowActions?: ReactNode;
   actionsOverflowed: boolean;
   actionsClassName?: string;
+  claimsFreeWidth: boolean;
   showStatusTrigger: boolean;
 };
 
@@ -464,16 +475,23 @@ function TopbarRightZone({
   overflowActions,
   actionsOverflowed,
   actionsClassName,
+  claimsFreeWidth,
   showStatusTrigger,
 }: TopbarRightZoneProps) {
   const hasCluster = Boolean(actions || overflowActions);
   if (!hasCluster && !showStatusTrigger) return null;
   return (
-    // No `min-w-0`: the zone's automatic minimum is its min-content width, so a
-    // default `shrink-0` cluster still pins it at full width and every shrink
-    // goes to the lead zone. A cluster that opts into shrinking (the phone
-    // bar's scrolling action strip) lowers that floor instead of overflowing.
-    <div ref={zoneRef} className="flex shrink items-center gap-3">
+    // Default: no `min-w-0`, so the zone's automatic minimum is its min-content
+    // width, a `shrink-0` cluster stays pinned at full width, and every shrink
+    // goes to the lead zone.
+    // `claimsFreeWidth`: the cluster is the flexible one, so this zone has to
+    // grow — a `flex-1` cluster has a zero base size and would otherwise
+    // resolve to zero width inside a zone that only ever shrinks. `min-w-0`
+    // comes with it so the cluster can still scroll rather than overflow.
+    <div
+      ref={zoneRef}
+      className={cn("flex items-center gap-3", claimsFreeWidth ? "min-w-0 grow" : "shrink")}
+    >
       {hasCluster && (
         <div className={cn("relative z-10 flex shrink-0 items-center gap-2", actionsClassName)}>
           {!actionsOverflowed && overflowActions}
@@ -529,6 +547,7 @@ export const PageTopbar = forwardRef<HTMLElement, PageTopbarProps>(function Page
     actions,
     overflowActions,
     className,
+    freeWidth = "lead",
     centerClassName,
     actionsClassName,
     showStatusTrigger = true,
@@ -541,6 +560,7 @@ export const PageTopbar = forwardRef<HTMLElement, PageTopbarProps>(function Page
   const leadZoneRef = useRef<HTMLDivElement>(null);
   const ghostRef = useRef<HTMLDivElement>(null);
   const rightZoneRef = useRef<HTMLDivElement>(null);
+  const actionsClaimFreeWidth = freeWidth === "actions";
   // Measurement only matters once there is something that can fold.
   const measured = (parents?.length ?? 0) > 0 || overflowActions != null;
   const pressure = useTopbarPressure(
@@ -568,7 +588,15 @@ export const PageTopbar = forwardRef<HTMLElement, PageTopbarProps>(function Page
           subtitle={subtitle}
         />
       )}
-      <div ref={leadZoneRef} className="flex min-w-0 grow items-center gap-3">
+      <div
+        ref={leadZoneRef}
+        className={cn(
+          "flex min-w-0 items-center gap-3",
+          // Only one zone can own the slack. When the actions take it, this one
+          // sizes to its content instead of spreading across the empty middle.
+          actionsClaimFreeWidth ? "shrink" : "grow",
+        )}
+      >
         {leading}
         <TopbarBreadcrumb
           backHref={backHref}
@@ -595,6 +623,7 @@ export const PageTopbar = forwardRef<HTMLElement, PageTopbarProps>(function Page
         overflowActions={overflowActions}
         actionsOverflowed={pressure.actionsOverflowed}
         actionsClassName={actionsClassName}
+        claimsFreeWidth={actionsClaimFreeWidth}
         showStatusTrigger={showStatusTrigger}
       />
     </header>

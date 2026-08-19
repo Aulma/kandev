@@ -243,6 +243,11 @@ export function KanbanHeaderMobile({
         // The brand link is this bar's home affordance; a home crumb on top
         // of it would say the same thing twice.
         homeAffordance="none"
+        // The strip is this bar's flexible zone, so the bar's leftover width has
+        // to reach it. Left with the lead zone it would sit in the empty middle
+        // and the `flex-1` strip, whose base size is zero, would render at zero
+        // width with the actions unreachable behind it.
+        freeWidth="actions"
         // The action strip scrolls rather than pushing the title crumb off the
         // bar, so this cluster has to be the flexible one in the right zone.
         actionsClassName="min-w-0 flex-1 !shrink gap-2"
