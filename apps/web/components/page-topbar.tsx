@@ -181,27 +181,59 @@ function TopbarBreadcrumb({
         )}
         <ParentCrumbs parents={parents} forceCollapsed={crumbsCollapsed} />
         <BreadcrumbItem className="min-w-0">
-          <BreadcrumbPage
-            className="flex min-w-0 items-center gap-2"
-            aria-label={titleSlot ? title : undefined}
-            // An interactive titleSlot (e.g. a rename control) must not sit
-            // inside a subtree announced as disabled.
-            aria-disabled={titleSlot ? false : undefined}
-          >
-            {icon}
-            {titleSlot ?? <span className="truncate text-sm font-medium">{title}</span>}
-            {subtitle && (
-              <>
-                <span className="hidden text-muted-foreground/50 sm:inline">·</span>
-                <span className="hidden truncate text-xs text-muted-foreground sm:inline">
-                  {subtitle}
-                </span>
-              </>
-            )}
-          </BreadcrumbPage>
+          <TitleCrumb title={title} titleSlot={titleSlot} subtitle={subtitle} icon={icon} />
         </BreadcrumbItem>
       </BreadcrumbList>
     </Breadcrumb>
+  );
+}
+
+const TITLE_CRUMB_CLASSNAME = "flex min-w-0 items-center gap-2";
+
+/**
+ * The current-page crumb.
+ *
+ * Plain text uses `BreadcrumbPage`, whose `role="link" aria-disabled="true"` is
+ * the right shape for a dead-end label. A `titleSlot` is not that: it carries
+ * its own interactive control (the inline rename), which must not be announced
+ * as a disabled link, and flipping `aria-disabled` off would leave the wrapper
+ * claiming a link role it never navigates. So a custom title gets plain
+ * current-page markup instead, and the slot owns its own accessible name.
+ */
+function TitleCrumb({
+  title,
+  titleSlot,
+  subtitle,
+  icon,
+}: {
+  title: string;
+  titleSlot?: ReactNode;
+  subtitle?: string;
+  icon?: ReactNode;
+}) {
+  const body = (
+    <>
+      {icon}
+      {titleSlot ?? <span className="truncate text-sm font-medium">{title}</span>}
+      {subtitle && (
+        <>
+          <span className="hidden text-muted-foreground/50 sm:inline">·</span>
+          <span className="hidden truncate text-xs text-muted-foreground sm:inline">
+            {subtitle}
+          </span>
+        </>
+      )}
+    </>
+  );
+  if (!titleSlot) return <BreadcrumbPage className={TITLE_CRUMB_CLASSNAME}>{body}</BreadcrumbPage>;
+  return (
+    <span
+      data-slot="breadcrumb-page"
+      aria-current="page"
+      className={cn("font-normal text-foreground", TITLE_CRUMB_CLASSNAME)}
+    >
+      {body}
+    </span>
   );
 }
 

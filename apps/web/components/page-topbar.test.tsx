@@ -106,7 +106,7 @@ describe("PageTopbar parent crumbs", () => {
 describe("PageTopbar titleSlot", () => {
   afterEach(cleanup);
 
-  it("renders the slot as the current crumb and keeps title as the accessible name", () => {
+  it("renders the slot as the current crumb without a dead link role", () => {
     render(
       <PageTopbar
         title="Checkout revamp"
@@ -116,11 +116,25 @@ describe("PageTopbar titleSlot", () => {
     );
 
     const page = screen.getByTestId("slot-topbar").querySelector('[data-slot="breadcrumb-page"]');
-    expect(page?.getAttribute("aria-label")).toBe("Checkout revamp");
     // The slot renders inside the current-page crumb, not merely somewhere.
     expect(page?.contains(screen.getByLabelText("Rename task"))).toBe(true);
+    expect(page?.getAttribute("aria-current")).toBe("page");
+    // `BreadcrumbPage` hardcodes `role="link" aria-disabled="true"`, which would
+    // wrap this interactive control in a disabled link that goes nowhere.
+    expect(page?.getAttribute("role")).toBeNull();
+    expect(page?.getAttribute("aria-disabled")).toBeNull();
     // The plain-text title span is replaced, not doubled.
     expect(screen.queryByText("Checkout revamp")).toBeNull();
+  });
+
+  it("keeps the disabled-link crumb semantics for a plain text title", () => {
+    render(<PageTopbar title="Checkout revamp" testId="text-topbar" />);
+
+    const page = screen.getByTestId("text-topbar").querySelector('[data-slot="breadcrumb-page"]');
+    expect(page?.getAttribute("role")).toBe("link");
+    expect(page?.getAttribute("aria-disabled")).toBe("true");
+    expect(page?.getAttribute("aria-current")).toBe("page");
+    expect(page?.textContent).toBe("Checkout revamp");
   });
 });
 
