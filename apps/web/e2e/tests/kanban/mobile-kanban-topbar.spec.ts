@@ -28,7 +28,8 @@ test.describe("Mobile kanban topbar", () => {
   });
 
   test("uses the brand link as the only home affordance", async ({ testPage }) => {
-    await testPage.goto("/tasks");
+    const mobile = new MobileKanbanPage(testPage);
+    await mobile.goto();
 
     const header = testPage.locator("header").first();
     const brand = header.getByTestId("mobile-topbar-brand");
@@ -37,9 +38,23 @@ test.describe("Mobile kanban topbar", () => {
     // already goes home would say the same thing twice.
     await expect(header.getByTestId("topbar-phone-home")).toHaveCount(0);
 
+    // From the board the brand stays a same-page home link; from the task list
+    // it must restore the preferred listing view instead of forcing the board
+    // — visiting /tasks stores "list", and Home honors that stored preference
+    // with the workspace preserved (the same contract
+    // chat/mobile-quick-chat-entry.spec.ts pins for the URL). The brand is
+    // still the bar's only home affordance either way.
+    await testPage.goto("/tasks");
+    await expect(header.getByTestId("topbar-phone-home")).toHaveCount(0);
+
     await brand.tap();
-    await expect(header.locator('[data-slot="breadcrumb-page"]')).toHaveText("Home");
-    await expect(new MobileKanbanPage(testPage).mobileKanbanLayout()).toBeVisible();
+    // The restore lands back on /tasks with the workspace pinned into the URL
+    // — the param only appears through the round trip, so it is the proof the
+    // tap navigated rather than sat inert.
+    await expect(testPage).toHaveURL(
+      (url) => url.pathname === "/tasks" && url.searchParams.has("workspace"),
+    );
+    await expect(header.locator('[data-slot="breadcrumb-page"]')).toHaveText("Tasks");
   });
 
   test("keeps the brand and menu fixed while the action strip absorbs pressure", async ({
