@@ -386,9 +386,18 @@ function TopbarGhost({
   subtitle,
 }: TopbarGhostProps) {
   const showBack = backHref !== "/" && !!backLabel;
-  const showAlwaysHome = !showBack && homeAffordance === "always";
   const chain = parents ?? [];
   const lastParent = chain.length > 0 ? chain[chain.length - 1] : undefined;
+  const homeLead =
+    !showBack && homeAffordance !== "none" ? (
+      <span
+        className={cn("flex items-center gap-1.5", homeAffordance === "phone" && "md:hidden")}
+        data-testid="topbar-ghost-home"
+      >
+        <IconHome className="h-4 w-4 shrink-0" />
+        <GhostSeparator />
+      </span>
+    ) : null;
   const lead = showBack ? (
     <>
       <IconArrowLeft className="h-3.5 w-3.5 shrink-0" />
@@ -396,12 +405,7 @@ function TopbarGhost({
       <GhostSeparator />
     </>
   ) : (
-    showAlwaysHome && (
-      <>
-        <IconHome className="h-4 w-4 shrink-0" />
-        <GhostSeparator />
-      </>
-    )
+    homeLead
   );
   return (
     <div

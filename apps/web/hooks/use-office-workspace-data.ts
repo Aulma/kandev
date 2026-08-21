@@ -15,6 +15,7 @@ import type { StoreApi } from "zustand";
 type OfficeStore = StoreApi<AppState>;
 
 const requestSequences = new WeakMap<OfficeStore, Map<string, number>>();
+const inFlightProjectLoads = new WeakMap<OfficeStore, Map<string, Promise<void>>>();
 
 function nextRequestSequence(store: OfficeStore, key: string): number {
   let sequences = requestSequences.get(store);
@@ -49,16 +50,32 @@ export async function loadOfficeAgents(
 }
 
 /** Loads one workspace's projects with shared stale-response protection. */
-export async function loadOfficeProjects(
+export function loadOfficeProjects(
   store: OfficeStore,
   workspaceId: string,
   options?: ApiRequestOptions,
 ): Promise<void> {
   const key = `projects:${workspaceId}`;
+  let loads = inFlightProjectLoads.get(store);
+  if (!loads) {
+    loads = new Map();
+    inFlightProjectLoads.set(store, loads);
+  }
+  const existing = loads.get(key);
+  if (existing) return existing;
+
   const sequence = nextRequestSequence(store, key);
-  const response = await listProjects(workspaceId, options).catch(() => null);
-  if (!response || !isLatestRequest(store, key, sequence)) return;
-  store.getState().setProjects(workspaceId, response.projects ?? []);
+  const request = listProjects(workspaceId, options)
+    .then((response) => {
+      if (!isLatestRequest(store, key, sequence)) return;
+      store.getState().setProjects(workspaceId, response.projects ?? []);
+    })
+    .catch(() => {})
+    .finally(() => {
+      if (loads?.get(key) === request) loads.delete(key);
+    });
+  loads.set(key, request);
+  return request;
 }
 
 /**

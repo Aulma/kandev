@@ -48,6 +48,14 @@ describe("PageTopbar home crumb", () => {
     expect(screen.getByTestId(PHONE_HOME)).not.toBeNull();
   });
 
+  it("measures the phone-only home crumb when pressure measurement is enabled", () => {
+    render(<PageTopbar title="Plugins" parents={[{ label: "Workspace", href: "/workspace" }]} />);
+
+    for (const ghostHome of screen.getAllByTestId("topbar-ghost-home")) {
+      expect(ghostHome.className).toContain("md:hidden");
+    }
+  });
+
   it("omits it when the page already shows a real back link", () => {
     render(<PageTopbar title="Agent" backHref="/settings/agents" backLabel="Agents" />);
 

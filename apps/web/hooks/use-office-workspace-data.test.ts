@@ -225,6 +225,24 @@ describe("useOfficeWorkspaceData", () => {
 describe("useOfficeProject", () => {
   const PROJECT = { id: "p-1", name: "Checkout" };
 
+  it("shares an in-flight project load with the workspace chrome", async () => {
+    const pending = deferred<{ projects: StoredProject[] }>();
+    listProjects.mockReturnValueOnce(pending.promise);
+
+    renderHook(() => {
+      useOfficeWorkspaceData();
+      return useOfficeProject(PROJECT.id);
+    });
+
+    expect(listProjects).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      pending.resolve({ projects: [PROJECT] });
+      await pending.promise;
+    });
+    expect(setProjects).toHaveBeenCalledWith(OFFICE_WS, [PROJECT]);
+  });
+
   it("reads a warm project straight from the store without a request", async () => {
     projectsByWorkspaceId = { [OFFICE_WS]: [PROJECT] };
 
