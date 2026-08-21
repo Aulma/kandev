@@ -1374,6 +1374,8 @@
   "submitUnavailable": "無法提交",
   "submitting": "正在提交…",
   "subtask": "子任務",
+  "subtasksHeading_one": "{{count}} 個子任務",
+  "subtasksHeading_other": "{{count}} 個子任務",
   "subtasksBecomeRootTasksUnlessYou": "除非勾選此項，否則子任務將成為根任務。它們可能仍在進行中。",
   "subtasksStayActiveUnlessYouTick": "除非勾選此項，否則子任務保持活動。它們可能仍在進行中。",
   "successful": "{{operationName}} 成功",
