@@ -123,7 +123,7 @@ function useSimplePaneTopbar(task: Task, onToggleAdvanced?: () => void) {
     leftActions: <TopbarWorkingIndicator taskId={task.id} />,
     actions: (
       <>
-        <ExecutionIndicator status={task.status} />
+        <ExecutionIndicator status={task.rawStatus ?? task.status} />
         {onToggleAdvanced && (
           <div className="flex items-center gap-2">
             <Label
