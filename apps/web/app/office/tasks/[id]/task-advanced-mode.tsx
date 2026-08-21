@@ -38,7 +38,7 @@ export function TaskAdvancedMode({ task, onToggleSimple }: TaskAdvancedModeProps
     parents: [{ label: t("office:tasks"), href: "/office/tasks" }],
     actions: (
       <>
-        <ExecutionIndicator status={task.status} />
+        <ExecutionIndicator status={task.rawStatus ?? task.status} />
         <div className="flex items-center gap-2">
           <Label htmlFor="advanced-toggle" className="text-xs text-muted-foreground cursor-pointer">
             {t("office:advanced")}

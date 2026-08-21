@@ -1,5 +1,7 @@
 import { fetchJson, fetchJsonWithRetry, type ApiRequestOptions } from "../client";
-import type { DashboardData, OfficeTask } from "@/lib/state/slices/office/types";
+import type { DashboardData } from "@/lib/state/slices/office/types";
+import type { QuorumResponseDTO } from "@/lib/state/slices/office/quorum-types";
+import { normalizeOfficeTask, type OfficeTaskWire } from "./office-task-normalize";
 
 const BASE = "/api/v1/office";
 
@@ -161,10 +163,10 @@ export type TimelineEvent = {
 };
 
 export function getTask(taskId: string, options?: ApiRequestOptions) {
-  return fetchJson<{ task: OfficeTask; timeline?: TimelineEvent[] }>(
+  return fetchJson<{ task: OfficeTaskWire; timeline?: TimelineEvent[] }>(
     `${BASE}/tasks/${taskId}`,
     options,
-  );
+  ).then((response) => ({ ...response, task: normalizeOfficeTask(response.task) }));
 }
 
 // --- Task mutations (PATCH /tasks/:id) ---
@@ -336,6 +338,15 @@ export function listTaskDecisions(taskId: string, options?: ApiRequestOptions) {
   ).then((res) => res.decisions ?? []);
 }
 
+// --- Task quorum (AC-24b diagnostic read) ---
+
+export function getTaskQuorum(taskId: string, workspaceId: string, options?: ApiRequestOptions) {
+  return fetchJson<QuorumResponseDTO>(
+    `${BASE}/workspaces/${workspaceId}/tasks/${taskId}/quorum`,
+    options,
+  );
+}
+
 // --- Comments ---
 
 export type TaskCommentResponse = {
@@ -378,10 +389,13 @@ export function searchTasks(
   options?: ApiRequestOptions,
 ) {
   const params = new URLSearchParams({ q: query, limit: String(limit) });
-  return fetchJson<{ tasks: OfficeTask[] }>(
+  return fetchJson<{ tasks: OfficeTaskWire[] }>(
     `${BASE}/workspaces/${workspaceId}/tasks/search?${params.toString()}`,
     options,
-  );
+  ).then((response) => ({
+    ...response,
+    tasks: response.tasks.map(normalizeOfficeTask),
+  }));
 }
 
 // --- Instructions ---
